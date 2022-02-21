@@ -1,9 +1,32 @@
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, union
+import pandas, time
 
 # ssh sassy2
 # PGPASSWORD=***REMOVED*** psql --echo-all -h localhost -p 5432 -U sassy -d sassy -c "SELECT * FROM milliquas_q3c;"
+# -d: database
+# -h: host
+# -U: user (uid)
+
+def SQL_query(dbname):
+
+    # filled these in correctly?
+    # dialect[+driver]://+ dsn_uid + ':' + dsn_pwd + '@'+dsn_hostname+':'+dsn_port+'/' + dsn_database
+    'PostgreSQL://+sassy:***REMOVED***@localhost:5432/' + dbname
+
+    engine = create_engine(*args, echo = True)
+    meta = MetaData()
+
+    conn = engine.connect()
+    sql = "SELECT * FROM table1"
+    table1 = # get
+    u = union(addresses.select().where(addresses.c.email_add.like('%@gmail.com addresses.select().where(addresses.c.email_add.like('%@yahoo.com'))))
+
+    t0 = time.time()
+    df = pd.read_sql_query(sql, engine)
+    print("Completed in {:.1f} sec".format(time.time()-t0))
 
 def milliquas_query(ra,dec,rad=2):
 
