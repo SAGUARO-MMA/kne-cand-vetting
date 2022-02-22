@@ -1,34 +1,18 @@
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, union
-import pandas, time
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float, union, text, and_
+from sqlalchemy.sql import select
+from astropy.io import fits, ascii
+import time, os, sys
+
+import sqlalchemy
+print(sqlalchemy.__version__)
 
 # ssh sassy2
 # PGPASSWORD=***REMOVED*** psql --echo-all -h localhost -p 5432 -U sassy -d sassy -c "SELECT * FROM milliquas_q3c;"
-# -d: database
-# -h: host
-# -U: user (uid)
 
-def SQL_query(dbname):
-
-    # filled these in correctly?
-    # dialect[+driver]://+ dsn_uid + ':' + dsn_pwd + '@'+dsn_hostname+':'+dsn_port+'/' + dsn_database
-    'PostgreSQL://+sassy:***REMOVED***@localhost:5432/' + dbname
-
-    engine = create_engine(*args, echo = True)
-    meta = MetaData()
-
-    conn = engine.connect()
-    sql = "SELECT * FROM table1"
-    table1 = # get
-    u = union(addresses.select().where(addresses.c.email_add.like('%@gmail.com addresses.select().where(addresses.c.email_add.like('%@yahoo.com'))))
-
-    t0 = time.time()
-    df = pd.read_sql_query(sql, engine)
-    print("Completed in {:.1f} sec".format(time.time()-t0))
-
-def milliquas_query(ra,dec,rad=2):
+def milliquas_query(file,rad=2):
 
     '''
     Query the Million Quasar Catalog (Flesch 2021) for matches to
@@ -36,31 +20,67 @@ def milliquas_query(ra,dec,rad=2):
 
     PARAMETERS
     ----------
-    ra, dec : array of floats
+    ra, dec : float --> right now it's an ascii file that I pull from
         degrees
     radius : float
         default = 2, arcseconds
 
     RETURNS
     -------
-    match : array of floats
+    match : float
         1. = match to milliquas source with qpct > 97; 0. = no match
 
     '''
-    coords = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
-    print(coords)
+    # set up parameters to connect to sassy database where milliquas_q3c table stored
+    dbname = 'sassy'
+    eng = 'postgresql://sassy:***REMOVED***@localhost:5432/' + dbname
 
-    query = """
-    select p.*
-    inner join fGetNearbyObjEq({ra},{dec},{radius}) as r on p.objid=r.objid
-    """.format(**locals())
+    engine = create_engine(eng, echo = True)
+    meta = MetaData()
 
-    # Only accept quasars with Qpct > 97.
-    # qpct = r['Qpct']
-    q =  np.zeros(len(ra))
-    # q[qpct > 97.] = 1.0
+    conn = engine.connect()
 
-    return coords # q
+    # set up what the columns will look like
+    milliquas = Table(
+    'milliquas_q3c', meta,
+    Column('ra', Float),
+    Column('dec', Float),
+    Column('qpct',Float)
+    )
+
+    all_cand = ascii.read(file)
+    tot_names = all_cand['Name']
+    tot_radeg = all_cand['RA_deg'].astype(float)
+    tot_decdeg = all_cand['Dec_deg'].astype(float)
+
+    t0 = time.time()
+    qso = []
+    for i in range(len(tot_radeg)):
+        ra = tot_radeg[i]
+        dec = tot_decdeg[i]
+
+        # need to make conditions but now this should work!!
+        ra_high = ra + (rad / 3600.)
+        ra_low = ra - (rad / 3600.)
+        dec_high = dec + (rad / 3600.)
+        dec_low = dec - (rad / 3600.)
+
+        # set conditions to select match
+        s = milliquas.select().where(and_(text("milliquas_q3c.ra between :x1 and :x2"),text("milliquas_q3c.dec between :y1 and :y2"),text("milliquas_q3c.qpct>97.")))
+
+        result = conn.execute(s, x1 = ra_low, x2 = ra_high, y1 = dec_low, y2 = dec_high).fetchall()
+
+        if len(result) > 0:
+            print('QUASAR MATCH!')
+            qso.append(1.0)
+        else:
+            print('No quasar match.')
+            qso.append(0.0)
+
+    print("Completed in {:.3f} sec".format(time.time()-t0))
+    print("Found {:.1f} QSO of {:.2f} candidates".format(sum(qso),len(qso)))
+
+milliquas_query('comb_master_FINAL.dat')
 
 def gaia_query(ra,dec,rad=2):
     '''
