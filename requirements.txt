@@ -4,6 +4,3 @@ numpy
 astropy
 sqlalchemy
 pandas
-time
-os
-sys

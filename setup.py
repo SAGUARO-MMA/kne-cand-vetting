@@ -41,7 +41,7 @@ setup(
     long_description=readme,
     author="SAGUARO-MMA",
     author_email='jillianrastinejad2024@u.northwestern.edu',
-    url='https://github.com/jrastinejad/kne-cand-vetting',
+    url='https://github.com/SAGUARO-MMA/kne-cand-vetting',
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
     packages=find_packages(exclude=['docs', 'tests']),
     entry_points={
