@@ -89,6 +89,8 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
     # print(qso,qprob,qoffset)
     session.close()
 
+    return qprob, qso, qoffset
+
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
 
@@ -197,11 +199,11 @@ if __name__ == '__main__':
     _p.add_argument(f'--radius', default=RADIUS_ARCSEC, help="""Radius (arcsec), default %(default)s""")
     _p.add_argument(f'--verbose', default=False, action='store_true', help=f'if present, produce more verbose output')
     _a = _p.parse_args()
-    print(_a)
 
     # execute
     try:
-        static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        qprob, qso, qoffset = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        print(qprob, qso, qoffset)
     except Exception as _x:
         print(f"{_x}")
         print(f"Use:{__doc__}")
