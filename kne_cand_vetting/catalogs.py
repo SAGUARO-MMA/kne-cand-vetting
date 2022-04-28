@@ -43,29 +43,28 @@ RADIUS_ARCSEC = 2.0
 # function: milliquas_query()
 # -
 #  ->  allows you to optionall accept inputs as lists
-def static_cats_query(_file: str = FILE, _radius: float = RADIUS_ARCSEC, _verbose: bool = False) -> Optional[list]:
-    """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
+def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False) -> Optional[list]:
 
     # check input(s)
-    _file = os.path.abspath(os.path.expanduser(f"{_file}"))
-    if not os.path.exists(_file):
-        raise Exception(f"invalid input, _file={_file}")
+    # _file = os.path.abspath(os.path.expanduser(f"{_file}"))
+    # if not os.path.exists(_file):
+    #     raise Exception(f"invalid input, _file={_file}")
 
     _radius /= 3600.0 # convert to degrees
     if _radius <= 0.0:
         raise Exception(f"invalid input, _radius={_radius}")
 
     # read the file into an astropy ascii table
-    _candidates = None
-    try:
-        _candidates = ascii.read(_file)
-    except Exception as _e1:
-        if _verbose:
-            print(f"{_e1}")
-        raise Exception(f"Unable to read {_file}")
-    else:
-        if len(_candidates) <= 0:
-            raise Exception(f"File {_file} contains no data")
+    # _candidates = None
+    # try:
+    #     _candidates = ascii.read(_file)
+    # except Exception as _e1:
+    #     if _verbose:
+    #         print(f"{_e1}")
+    #     raise Exception(f"Unable to read {_file}")
+    # else:
+    #     if len(_candidates) <= 0:
+    #         raise Exception(f"File {_file} contains no data")
 
     # connect to database
     try:
@@ -77,10 +76,13 @@ def static_cats_query(_file: str = FILE, _radius: float = RADIUS_ARCSEC, _verbos
             print(f"{_e2}")
         raise Exception(f"Failed to connect to database")
 
-    _names = [_ for _ in _candidates['Name']]
+    # _names = [_ for _ in _candidates['Name']]
 
     # gather co-ordinates into (Ra, Dec) tuples
-    _coords = tuple(zip(_candidates['RA_deg'], _candidates['Dec_deg']))
+    _coords = zip(RA, Dec)
+    # print(RA,Dec)
+    # _coords = tuple(RA, Dec)
+    _names = 'default'
 
     # Pass to milliquas_query
     qprob, qso, qoffset = milliquas_query(session, _coords, _names, _radius)
@@ -88,6 +90,7 @@ def static_cats_query(_file: str = FILE, _radius: float = RADIUS_ARCSEC, _verbos
     session.close()
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
+    """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
 
     # set variable(s)
     _begin = time.time()
@@ -138,6 +141,7 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     return qprob, qso, qoffset
 
 def asassn_query(session, coords, RADIUS_ARCSEC, _verbose: bool = False):
+    """ Query the ASAS-SN variable star catalog (Flesch 2021) for matches to kilonova candidates """
 
     _begin = time.time()
 
@@ -176,7 +180,7 @@ def asassn_query(session, coords, RADIUS_ARCSEC, _verbose: bool = False):
     _end = time.time()
 
     print(f"Completed ASAS-SN search in {_end-_begin:.3f} sec")
-    print(f"Found {len(match)} QSOs in {len(coords)} candidates")
+    print(f"Found {len(match)} variable stars in {len(coords)} candidates")
 
     return starprob, star, staroffset
 
@@ -188,14 +192,16 @@ if __name__ == '__main__':
 
     # get command line argument(s)
     _p = argparse.ArgumentParser(description=f'catalogs.py', formatter_class=argparse.RawTextHelpFormatter)
-    _p.add_argument(f'--file', default=FILE, help="""File, default '%(default)s'""")
+    _p.add_argument(f'--RA', default=0.0, help="""RA, default '%(default)s'""", type=float, nargs='+')
+    _p.add_argument(f'--Dec', default=0.0, help="""DEC., default '%(default)s'""", type=float, nargs='+')
     _p.add_argument(f'--radius', default=RADIUS_ARCSEC, help="""Radius (arcsec), default %(default)s""")
     _p.add_argument(f'--verbose', default=False, action='store_true', help=f'if present, produce more verbose output')
     _a = _p.parse_args()
+    print(_a)
 
     # execute
     try:
-        static_cats_query(_file=_a.file, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
     except Exception as _x:
         print(f"{_x}")
         print(f"Use:{__doc__}")
