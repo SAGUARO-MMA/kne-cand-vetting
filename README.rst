@@ -9,7 +9,7 @@ Kilonova Candidate Vetting
         :target: https://pypi.python.org/pypi/kne-cand-vetting
 
 
-Package for assessing viability of candidate kilonova counterparts to GW events.
+Package for assessing viability of candidate counterparts to GW events.
 
 * Free software: 3-clause BSD license
 * Documentation: (COMING SOON!) https://jrastinejad.github.io/kne-cand-vetting.
@@ -17,4 +17,4 @@ Package for assessing viability of candidate kilonova counterparts to GW events.
 Features
 --------
 
-* TODO
+* Milliquas matching
