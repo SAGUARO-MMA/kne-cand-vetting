@@ -29,10 +29,15 @@ __doc__ = """ PYTHONPATH=/home/phil_daly/SASSyII python3 catalogs.py --help """
 # +
 # constant(s)
 # -
-DB_CONNECT = f"postgresql+psycopg2://sassy:***REMOVED***@localhost:5432/sassy"
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_NAME = os.getenv('DB_NAME', 'sassy')
+DB_PASS = os.getenv('DB_PASS', None)
+DB_PORT = os.getenv('DB_PORT', 5432)
+DB_USER = os.getenv('DB_USER', 'sassy')
+
+DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 FILE = os.path.abspath(os.path.expanduser("comb_master_FINAL.dat"))
 RADIUS_ARCSEC = 2.0
-
 
 # +
 # function: milliquas_query()
@@ -78,8 +83,8 @@ def static_cats_query(_file: str = FILE, _radius: float = RADIUS_ARCSEC, _verbos
     _coords = tuple(zip(_candidates['RA_deg'], _candidates['Dec_deg']))
 
     # Pass to milliquas_query
-    qso, qprob, qoffset = milliquas_query(session, _coords, _names, _radius)
-    print(qso,qprob,qoffset)
+    qprob, qso, qoffset = milliquas_query(session, _coords, _names, _radius)
+    # print(qso,qprob,qoffset)
     session.close()
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
@@ -88,13 +93,13 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     _begin = time.time()
 
     qso = []; qoffset = []; qprob = []
+    match=0
 
     # for all (RA, Dec) tuples, execute cone search and log candidates with qpct > 97(%)
     for _i, _e in enumerate(coords):
 
         # set up query
         try:
-            # _radius /= 99999999999999
             query = session.query(MilliQuasQ3cRecord)
             query = milliquas_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}', 'q__gte': 97})
         except Exception as _e3:
@@ -109,6 +114,7 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
             qprob.append(0.0)
             qoffset.append(None)
         else:
+            match+=1
             for _x in MilliQuasQ3cRecord.serialize_list(query.all()):
                 print(f'>>> QUASAR MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
 
@@ -126,16 +132,53 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     # return list of probabilities (although I think you'd be better off returning the qso list!)
     # print(f"QSO Candidates: {qso}")
     # print(f"QSO Probabilities: {qprob}")
-    print(f"Completed in {_end-_begin:.3f} sec")
-    print(f"Found {len(qso)} QSOs in {len(coords)} candidates")
+    print(f"Completed Milliquas search in {_end-_begin:.3f} sec")
+    print(f"Found {match} QSOs in {len(coords)} candidates")
 
-    return qso, qprob, qoffset
+    return qprob, qso, qoffset
 
 def asassn_query(session, coords, RADIUS_ARCSEC, _verbose: bool = False):
 
     _begin = time.time()
 
-    f_asassn = 0.0 * len(coords)
+    starprob = []; star = []; staroffset = []
+    match=0
+
+    for _i, _e in enumerate(coords):
+
+        # set up query
+        try:
+            query = session.query(ASASSNQ3cRecord) # not sure if this name is right
+            query = asassn_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
+        except Exception as _e3:
+            if _verbose:
+                print(f"{_e3}")
+            print(f"Failed to execute query for RA, Dec = ({_e[0]}, {_e[1]}), index={_i}")
+            continue
+        # execute the query
+        if len(query.all()) == 0:
+            star.append(None)
+            starprob.append(0.0)
+            staroffset.append(None)
+        else:
+            match+=1
+            for _x in asassn_q3c_orm_filters.serialize_list(query.all()):
+                print(f'>>> ASAS-SN V.S. MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
+
+                # add the query dictionary to the qso list and modify the qprob list
+                star.append(_x['name']) #{**_x, **{'Candidate': names[_i], 'Probability': 1.0, 'Candidate_RA': _e[0], 'Candidate_Dec': _e[1]}})
+                starprob.append(1.0)
+
+                star = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
+                staroffset.append(cand.separation(QSO).arcsec)
+
+    _end = time.time()
+
+    print(f"Completed ASAS-SN search in {_end-_begin:.3f} sec")
+    print(f"Found {len(match)} QSOs in {len(coords)} candidates")
+
+    return starprob, star, staroffset
 
 
 # +
