@@ -79,7 +79,7 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
     # _names = [_ for _ in _candidates['Name']]
 
     # gather co-ordinates into (Ra, Dec) tuples
-    _coords = zip(RA, Dec)
+    _coords = tuple(zip(RA, Dec))
     # print(RA,Dec)
     # _coords = tuple(RA, Dec)
     _names = 'default'
