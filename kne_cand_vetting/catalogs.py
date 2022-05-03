@@ -5,12 +5,14 @@
 # import(s)
 # -
 from astropy.io import ascii
-from sassy_src.models.milliquas_q3c_orm import *
-from sassy_src.models.milliquas_q3c_orm_cli import *
-from sassy_src.models.milliquas_q3c_orm_filters import *
-# from sassy_src.models.asassn_q3c_orm import *
-# from sassy_src.models.asassn_q3c_orm_filters import *
-# from sassy_src.models.asassn_q3c_orm_cli import *
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sassy_src.models import *
+from sassy_src.models.milliquas_q3c_orm import MilliQuasQ3cRecord
+from sassy_src.models.milliquas_q3c_orm_filters import milliquas_q3c_orm_filters
+from sassy_src.models.asassn_q3c_orm import AsAssnQ3cRecord
+from sassy_src.models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
+
 from typing import Optional
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -87,9 +89,12 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
     # Pass to milliquas_query
     qprob, qso, qoffset = milliquas_query(session, _coords, _names, _radius)
     # print(qso,qprob,qoffset)
+
+    asassnprob, asassn, asassnoffset = asassn_query(session, _coords, _names, _radius)
+
     session.close()
 
-    return qprob, qso, qoffset
+    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
@@ -142,7 +147,7 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
 
     return qprob, qso, qoffset
 
-def asassn_query(session, coords, RADIUS_ARCSEC, _verbose: bool = False):
+def asassn_query(session, coords, names, _radius, _verbose: bool = False):
     """ Query the ASAS-SN variable star catalog (Flesch 2021) for matches to kilonova candidates """
 
     _begin = time.time()
@@ -154,7 +159,7 @@ def asassn_query(session, coords, RADIUS_ARCSEC, _verbose: bool = False):
 
         # set up query
         try:
-            query = session.query(ASASSNQ3cRecord) # not sure if this name is right
+            query = session.query(AsAssnQ3cRecord)
             query = asassn_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
         except Exception as _e3:
             if _verbose:
@@ -168,21 +173,21 @@ def asassn_query(session, coords, RADIUS_ARCSEC, _verbose: bool = False):
             staroffset.append(None)
         else:
             match+=1
-            for _x in asassn_q3c_orm_filters.serialize_list(query.all()):
-                print(f'>>> ASAS-SN V.S. MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
+            for _x in AsAssnQ3cRecord.serialize_list(query.all()):
+                print(f'>>> ASAS-SN Variable Star MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
 
                 # add the query dictionary to the qso list and modify the qprob list
-                star.append(_x['name']) #{**_x, **{'Candidate': names[_i], 'Probability': 1.0, 'Candidate_RA': _e[0], 'Candidate_Dec': _e[1]}})
+                star.append(_x['asassn_name']) #{**_x, **{'Candidate': names[_i], 'Probability': 1.0, 'Candidate_RA': _e[0], 'Candidate_Dec': _e[1]}})
                 starprob.append(1.0)
 
                 star = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
                 cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
-                staroffset.append(cand.separation(QSO).arcsec)
+                staroffset.append(cand.separation(star).arcsec)
 
     _end = time.time()
 
     print(f"Completed ASAS-SN search in {_end-_begin:.3f} sec")
-    print(f"Found {len(match)} variable stars in {len(coords)} candidates")
+    print(f"Found {match} variable stars in {len(coords)} candidates")
 
     return starprob, star, staroffset
 
@@ -202,8 +207,8 @@ if __name__ == '__main__':
 
     # execute
     try:
-        qprob, qso, qoffset = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
-        print(qprob, qso, qoffset)
+        asassnprob, asassn, asassnoffset, qprob, qso, qoffset = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        # print(qprob, qso, qoffset)
     except Exception as _x:
         print(f"{_x}")
         print(f"Use:{__doc__}")
