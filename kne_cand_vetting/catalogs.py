@@ -42,7 +42,7 @@ FILE = os.path.abspath(os.path.expanduser("comb_master_FINAL.dat"))
 RADIUS_ARCSEC = 2.0
 
 # +
-# function: milliquas_query()
+# function: static_cats_query()
 # -
 #  ->  allows you to optionall accept inputs as lists
 def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False) -> Optional[list]:
