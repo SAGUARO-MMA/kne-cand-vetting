@@ -4,14 +4,22 @@ from astropy.io import ascii
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sassy_src.models import *
-import numpy as np
+import numpy
 
 from sassy_src.models.glade_plus_q3c_orm import GladePlusQ3cRecord
 from sassy_src.models.glade_plus_q3c_orm_filters import glade_plus_q3c_orm_filters
+from sassy_src.models.gwgc_q3c_orm import GwgcQ3cRecord
+from sassy_src.models.gwgc_q3c_orm_filters import gwgc_q3c_orm_filters
+from sassy_src.models.hecate_q3c_orm import HecateQ3cRecord
+from sassy_src.models.hecate_q3c_orm_filters import hecate_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
+from astropy import cosmology
 from astropy import units as u
+from astropy.cosmology import FlatLambdaCDM
+from astropy.cosmology import z_at_value
+cosmo = FlatLambdaCDM(H0=69.6 * u.km / u.s / u.Mpc, Tcmb0=2.725 * u.K, Om0=0.3)
 
 import argparse
 import os
@@ -32,12 +40,13 @@ DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB
 
 # Chose radius to be equal to a 100 kpc offset at ~100 Mpc
 RADIUS_ARCMIN = 3.183
+PCC_THRESHOLD = 0.5
 
-def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _verbose: bool = False) -> Optional[list]:
+def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_thresh: float = PCC_THRESHOLD, _verbose: bool = False) -> Optional[list]:
 
     """
     Searches for galaxy match to candidate in GLADE, HECATE, GWGC, SDSS, Legacy DR8 and PS1-STRM catalogs
-    Returns 5 galaxies with lowest Pcc values, their offsets, redshifts and magnitudes
+    Returns 10 galaxies with lowest Pcc values (must be < PCC_THRESHOLD), their offsets, redshifts and magnitudes
 
     PARAMETERS
     ----------
@@ -72,24 +81,50 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _verbos
 
     # loop through RA, Dec here
     _begin = time.time()
-
+    glade=0; gwgc=0; hecate=0
 
     for i in range(len(RA)):
 
-        GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_bmag, GLADE_z, GLADE_z_err = query_GLADE(session, RA[i], Dec[i], _radius)
+        # Find matches in GLADE:
+        GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source = query_GLADE(session, RA[i], Dec[i], _radius)
+        if GLADE_matches>0:
+            glade+=1
+
+        # Find matches in GWGC:
+        GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source = query_GWGC(session, RA[i], Dec[i], _radius)
+        if GWGC_matches>0:
+            gwgc+=1
+
+        HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source = query_hecate(session, RA[i], Dec[i], _radius)
+        if HECATE_matches>0:
+            hecate+=1
+
+        # sum the findings, turn into numpy arrays
+        tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset)
+        tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag)
+        tot_ra = numpy.array(GLADE_ra + GWGC_ra + HECATE_ra)
+        tot_dec = numpy.array(GLADE_dec + GWGC_dec + HECATE_dec)
+        tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt)
+        tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist)
+        tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err)
+        tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source)
+
+        PCCS = pcc(tot_offsets,tot_mags)
+
+        # put some basic cut on Pcc ?
+        pcc_args = numpy.argsort(PCCS)[:10]
+        cond = (PCCS[pcc_args] < _pcc_thresh)
+
+        print(PCCS[pcc_args][cond], tot_dists[pcc_args][cond], tot_source[pcc_args][cond])
 
     _end = time.time()
 
     print(f"Completed galaxy search in {_end-_begin:.3f} sec")
-    print(f"Found {GLADE_matches} of {len(RA)} candidates with a GLADE galaxy match.")
+    print(f"Found {glade} of {len(RA)} candidates with a GLADE galaxy match.")
+    print(f"Found {gwgc} of {len(RA)} candidates with a GWGC galaxy match.")
+    print(f"Found {hecate} of {len(RA)} candidates with a HECATE galaxy match.")
 
-    PCCS = pcc(GLADE_offset,GLADE_bmag)
-
-    best_pcc_args = numpy.where(PCCS == PCCS.min())
-
-    # Write something that sorts all galaxies by Pcc and grabs top 5
-
-    return GLADE_z[best_pcc_args][:5] #gal_name, gal_RA, gal_Dec, pcc, offset, zspec, zphot, zphoterr_low, zphoterr_high, mag, magfilter
+    return PCCS[pcc_args][cond],tot_ra[pcc_args][cond],tot_dec[pcc_args][cond],tot_dists[pcc_args][cond],tot_dist_errs[pcc_args][cond],tot_mags[pcc_args][cond],tot_filt[pcc_args][cond],tot_source[pcc_args][cond]
 
 def pcc(r,m):
     """
@@ -105,8 +140,8 @@ def pcc(r,m):
     -------
     Pcc values : array of floats [0,1]
     """
-    sigma = (1/(0.33*np.log(10)))*10**(0.33*(m-24)-2.44)
-    prob = 1-np.exp(-(np.pi*(r**2)*sigma))
+    sigma = (1/(0.33*numpy.log(10)))*10**(0.33*(m-24)-2.44)
+    prob = 1-numpy.exp(-(numpy.pi*(r**2)*sigma))
 
     return prob
 
@@ -115,7 +150,7 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
     """ Query the GLADE+ catalog """
     m=0
     # what if no B-mag?
-    gal_offset = []; bmag = []; z = []; z_err = []; gal_ra = []; gal_dec = []
+    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []
 
     # set up query
     try:
@@ -127,19 +162,115 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
         print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
 
     if len(query.all()) > 0:
-        print(len(query.all()))
         m+=1
         for _x in GladePlusQ3cRecord.serialize_list(query.all()):
-            gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
-            cand = SkyCoord(ra*u.deg, dec*u.deg)
-            gal_offset.append(cand.separation(gal).arcsec)
-            bmag.append(_x['b'])
-            gal_ra.append(_x['ra'])
-            gal_dec.append(_x['dec'])
-            z.append(_x['z_cmb'])
-            z_err.append(_x['z_err'])
+            if _x['b']== _x['b']:
+                mag.append(_x['b'])
+                filt.append('B')
+                gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra']) # degrees
+                gal_dec.append(_x['dec']) # degrees
+                dist.append(_x['d_l']) # Mpc
+                dist_err.append(_x['d_l_err']) # Mpc
 
-    return m, gal_ra, gal_dec, np.array(gal_offset), np.array(bmag), z, z_err
+                # DIST FLAG PARAMETERS:
+                # 0 = the galaxy has no measured redshift or distance value
+                # 1 = it has a measured photometric redshift from which we have calculated its luminosity distance
+                # 2: it has a measured luminosity distance value from which we have calculated its redshift
+                # 3: it has a measured spectroscopic redshift from which we have calculated its luminosity distance
+                distflag.append(_x['dist_flag'])
+                source.append('GLADE')
+            elif _x['b_j']== _x['b_j']:
+                mag.append(_x['b_j'])
+                filt.append('B_j')
+                gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['dec'])
+                dist.append(_x['d_l'])
+                dist_err.append(_x['d_l_err'])
+                distflag.append(_x['dist_flag'])
+                source.append('GLADE')
+            # else:
+            #     mag.append(_x['w1'])
+            #     filt.append('W1')
+            #     gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+            #     cand = SkyCoord(ra*u.deg, dec*u.deg)
+            #     gal_offset.append(cand.separation(gal).arcsec)
+            #     gal_ra.append(_x['ra'])
+            #     gal_dec.append(_x['dec'])
+            #     z.append(_x['z_cmb'])
+            #     z_err.append(_x['z_err'])
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, distflag, source
+
+def query_GWGC(session, ra, dec, _radius, _verbose: bool = True):
+
+    """ Query the GWGC catalog """
+    m=0
+    # what if no B-mag?
+    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []
+
+    # set up query
+    try:
+        query = session.query(GwgcQ3cRecord)
+        query = gwgc_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+    except Exception as _e3:
+        if _verbose:
+            print(f"{_e3}")
+        print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
+
+    if len(query.all()) > 0:
+        m+=1
+        for _x in GwgcQ3cRecord.serialize_list(query.all()):
+            if _x['b_app']== _x['b_app']:
+                mag.append(_x['b_app'])
+                filt.append('B')
+                gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['dec'])
+                dist.append(_x['dist']) # Mpc
+                dist_err.append(_x['e_dist']) # Mpc
+                source.append('GWGC')
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source
+
+def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
+
+    """ Query the HECATE catalog """
+    m=0
+    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []
+
+    # set up query
+    try:
+        query = session.query(HecateQ3cRecord)
+        query = hecate_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+    except Exception as _e3:
+        if _verbose:
+            print(f"{_e3}")
+        print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
+
+    if len(query.all()) > 0:
+        m+=1
+        for _x in HecateQ3cRecord.serialize_list(query.all()):
+            if _x['bt']== _x['bt']:
+                mag.append(_x['bt'])
+                filt.append('B')
+                gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['dec'])
+                dist.append(_x['d']) # Mpc
+                dist_err.append(_x['e_d']) # Mpc
+                source.append('HECATE')
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source
 
 if __name__ == '__main__':
 
@@ -148,12 +279,13 @@ if __name__ == '__main__':
     _p.add_argument(f'--RA', default=0.0, help="""RA, default '%(default)s'""", type=float, nargs='+')
     _p.add_argument(f'--Dec', default=0.0, help="""DEC., default '%(default)s'""", type=float, nargs='+')
     _p.add_argument(f'--radius', default=RADIUS_ARCMIN, help="""Radius (arcmin), default %(default)s""")
+    _p.add_argument(f'--pcc_threshold', default=PCC_THRESHOLD, help="""Maximum Probability of Chance Coincidence Value to Return Galaxies, default %(default)s""")
     _p.add_argument(f'--verbose', default=False, action='store_true', help=f'if present, produce more verbose output')
     _a = _p.parse_args()
 
     # execute
     try:
-        output = galaxy_search(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        output = galaxy_search(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _pcc_thresh=float(_a.pcc_threshold), _verbose=bool(_a.verbose))
         # print(qprob, qso, qoffset)
     except Exception as _x:
         print(f"{_x}")
