@@ -177,9 +177,9 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
                 star.append(_x['asassn_name']) #{**_x, **{'Candidate': names[_i], 'Probability': 1.0, 'Candidate_RA': _e[0], 'Candidate_Dec': _e[1]}})
                 starprob.append(1.0)
 
-                star = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                asassn = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
                 cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
-                staroffset.append(cand.separation(star).arcsec)
+                staroffset.append(cand.separation(asassn).arcsec)
 
     _end = time.time()
 
