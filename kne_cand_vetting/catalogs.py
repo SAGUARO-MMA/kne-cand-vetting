@@ -7,11 +7,11 @@
 from astropy.io import ascii
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sassy_src.models import *
-from sassy_src.models.milliquas_q3c_orm import MilliQuasQ3cRecord
-from sassy_src.models.milliquas_q3c_orm_filters import milliquas_q3c_orm_filters
-from sassy_src.models.asassn_q3c_orm import AsAssnQ3cRecord
-from sassy_src.models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
+from sassy_q3c_models import *
+from sassy_q3c_models.milliquas_q3c_orm import MilliQuasQ3cRecord
+from sassy_q3c_models.milliquas_q3c_orm_filters import milliquas_q3c_orm_filters
+from sassy_q3c_models.asassn_q3c_orm import AsAssnQ3cRecord
+from sassy_q3c_models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -82,13 +82,10 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     # gather co-ordinates into (Ra, Dec) tuples
     _coords = tuple(zip(RA, Dec))
-    # print(RA,Dec)
-    # _coords = tuple(RA, Dec)
     _names = 'default'
 
     # Pass to milliquas_query
     qprob, qso, qoffset = milliquas_query(session, _coords, _names, _radius)
-    # print(qso,qprob,qoffset)
 
     asassnprob, asassn, asassnoffset = asassn_query(session, _coords, _names, _radius)
 
