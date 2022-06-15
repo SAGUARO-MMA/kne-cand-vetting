@@ -1,17 +1,18 @@
-# JCR May 2022, adapted from Charlie Kilpatrick et al.
+# JCR May 2022, adapted from Charlie Kilpatrick, Vic Dong et al.
 
 from astropy.io import ascii
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sassy_src.models import *
 import numpy
 
-from sassy_src.models.glade_plus_q3c_orm import GladePlusQ3cRecord
-from sassy_src.models.glade_plus_q3c_orm_filters import glade_plus_q3c_orm_filters
-from sassy_src.models.gwgc_q3c_orm import GwgcQ3cRecord
-from sassy_src.models.gwgc_q3c_orm_filters import gwgc_q3c_orm_filters
-from sassy_src.models.hecate_q3c_orm import HecateQ3cRecord
-from sassy_src.models.hecate_q3c_orm_filters import hecate_q3c_orm_filters
+from sassy_q3c_models.glade_plus_q3c_orm import GladePlusQ3cRecord
+from sassy_q3c_models.glade_plus_q3c_orm_filters import glade_plus_q3c_orm_filters
+from sassy_q3c_models.gwgc_q3c_orm import GwgcQ3cRecord
+from sassy_q3c_models.gwgc_q3c_orm_filters import gwgc_q3c_orm_filters
+from sassy_q3c_models.hecate_q3c_orm import HecateQ3cRecord
+from sassy_q3c_models.hecate_q3c_orm_filters import hecate_q3c_orm_filters
+from sassy_q3c_models.sdss12phot_q3c_orm import Sdss12PhotQ3cRecord
+from sassy_q3c_models.sdss12phot_q3c_orm_filters import sdss12phot_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -81,7 +82,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
 
     # loop through RA, Dec here
     _begin = time.time()
-    glade=0; gwgc=0; hecate=0
+    glade=0; gwgc=0; hecate=0; sdss=0
 
     for i in range(len(RA)):
 
@@ -98,6 +99,10 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source = query_hecate(session, RA[i], Dec[i], _radius)
         if HECATE_matches>0:
             hecate+=1
+
+        SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_dist, SDSS_dist_err, SDSS_source = query_sdss12phot(session, RA[i], Dec[i], _radius)
+        if SDSS_matches>0:
+            sdss+=1
 
         # sum the findings, turn into numpy arrays
         tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset)
@@ -123,6 +128,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     print(f"Found {glade} of {len(RA)} candidates with a GLADE galaxy match.")
     print(f"Found {gwgc} of {len(RA)} candidates with a GWGC galaxy match.")
     print(f"Found {hecate} of {len(RA)} candidates with a HECATE galaxy match.")
+    print(f"Found {sdss} of {len(RA)} candidates with a SDSS DR12 Photo-z Catalog galaxy match.")
 
     return PCCS[pcc_args][cond],tot_ra[pcc_args][cond],tot_dec[pcc_args][cond],tot_dists[pcc_args][cond],tot_dist_errs[pcc_args][cond],tot_mags[pcc_args][cond],tot_filt[pcc_args][cond],tot_source[pcc_args][cond]
 
@@ -271,6 +277,51 @@ def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
                 source.append('HECATE')
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source
+
+def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
+
+    '''Query the SDSS DR12 Photo-z Catalog'''
+
+    print('Function starting...')
+    # _radius = 1.0
+    print(_radius*60)
+
+    m=0
+    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = [];
+    gal_dec = []; distflag = []; source = []; dist_q = []
+
+    try:
+        query = session.query(Sdss12PhotQ3cRecord)
+        query = sdss12phot_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+    except Exception as _e3:
+        if _verbose:
+            print(f"{_e3}")
+        print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
+
+    # print(query.all())
+    if len(query.all()) > 0:
+        m+=1
+        for _x in Sdss12PhotQ3cRecord.serialize_list(query.all()):
+            if _x['rmag']== _x['rmag']:
+                mag.append(_x['rmag'])
+                filt.append('r')
+                gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                print(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['dec'])
+
+                # print(_x)
+
+                # Split spec and photo-z:
+                # if _x['z_sp']
+                # dist.append(_x['d']) # Mpc
+                # dist_err.append(_x['e_d']) # Mpc
+                # source.append('SDSS_DR12')
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source
+
 
 if __name__ == '__main__':
 
