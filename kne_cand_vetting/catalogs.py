@@ -33,7 +33,7 @@ __doc__ = """ PYTHONPATH=/home/phil_daly/SASSyII python3 catalogs.py --help """
 # -
 DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_NAME = os.getenv('DB_NAME', 'sassy')
-DB_PASS = os.getenv('DB_PASS', None)
+DB_PASS = os.getenv('POSTGRES_PASSWORD', None)
 DB_PORT = os.getenv('DB_PORT', 5432)
 DB_USER = os.getenv('DB_USER', 'sassy')
 
