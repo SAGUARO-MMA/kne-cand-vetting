@@ -4,4 +4,4 @@ numpy
 astropy
 sqlalchemy
 pandas
-git+https://github.com/SAGUARO-MMA/sassy_q3c_models
+sassy_q3c_models @ git+https://github.com/SAGUARO-MMA/sassy_q3c_models
