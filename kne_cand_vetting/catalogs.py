@@ -117,9 +117,9 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
 
         # execute the query
         if len(query.all()) == 0:
-            qso.append(None)
+            qso.append('None')
             qprob.append(0.0)
-            qoffset.append(None)
+            qoffset.append(-99.0)
         else:
             match+=1
             for _x in MilliQuasQ3cRecord.serialize_list(query.all()):
@@ -165,9 +165,9 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
             continue
         # execute the query
         if len(query.all()) == 0:
-            star.append(None)
+            star.append('None')
             starprob.append(0.0)
-            staroffset.append(None)
+            staroffset.append(-99.0)
         else:
             match+=1
             for _x in AsAssnQ3cRecord.serialize_list(query.all()):
