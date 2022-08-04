@@ -31,11 +31,11 @@ import time
 # -
 __doc__ = """ PYTHONPATH=/home/phil_daly/SASSyII python3 catalogs.py --help """
 
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_NAME = os.getenv('DB_NAME', 'sassy')
+DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+DB_NAME = os.getenv('POSTGRES_DB', 'sassy')
 DB_PASS = os.getenv('POSTGRES_PASSWORD', None)
-DB_PORT = os.getenv('DB_PORT', 5432)
-DB_USER = os.getenv('DB_USER', 'sassy')
+DB_PORT = os.getenv('POSTGRES_PORT', 5432)
+DB_USER = os.getenv('POSTGRES_USER', 'sassy')
 
 DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

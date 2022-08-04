@@ -31,11 +31,11 @@ __doc__ = """ PYTHONPATH=/home/phil_daly/SASSyII python3 catalogs.py --help """
 # +
 # constant(s)
 # -
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_NAME = os.getenv('DB_NAME', 'sassy')
+DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+DB_NAME = os.getenv('POSTGRES_DB', 'sassy')
 DB_PASS = os.getenv('POSTGRES_PASSWORD', None)
-DB_PORT = os.getenv('DB_PORT', 5432)
-DB_USER = os.getenv('DB_USER', 'sassy')
+DB_PORT = os.getenv('POSTGRES_PORT', 5432)
+DB_USER = os.getenv('POSTGRES_USER', 'sassy')
 
 DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 FILE = os.path.abspath(os.path.expanduser("comb_master_FINAL.dat"))
@@ -44,29 +44,12 @@ RADIUS_ARCSEC = 2.0
 # +
 # function: static_cats_query()
 # -
-#  ->  allows you to optionall accept inputs as lists
 def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False) -> Optional[list]:
 
-    # check input(s)
-    # _file = os.path.abspath(os.path.expanduser(f"{_file}"))
-    # if not os.path.exists(_file):
-    #     raise Exception(f"invalid input, _file={_file}")
 
     _radius /= 3600.0 # convert to degrees
     if _radius <= 0.0:
         raise Exception(f"invalid input, _radius={_radius}")
-
-    # read the file into an astropy ascii table
-    # _candidates = None
-    # try:
-    #     _candidates = ascii.read(_file)
-    # except Exception as _e1:
-    #     if _verbose:
-    #         print(f"{_e1}")
-    #     raise Exception(f"Unable to read {_file}")
-    # else:
-    #     if len(_candidates) <= 0:
-    #         raise Exception(f"File {_file} contains no data")
 
     # connect to database
     try:
