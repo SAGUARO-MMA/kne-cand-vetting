@@ -87,16 +87,16 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     for i in range(len(RA)):
 
         # Find matches in GLADE:
-        GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name, GLADE_name_source = query_GLADE(session, RA[i], Dec[i], _radius)
+        GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name = query_GLADE(session, RA[i], Dec[i], _radius)
         if GLADE_matches>0:
             glade+=1
 
         # Find matches in GWGC:
-        GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name, GWGC_name_source = query_GWGC(session, RA[i], Dec[i], _radius)
+        GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name = query_GWGC(session, RA[i], Dec[i], _radius)
         if GWGC_matches>0:
             gwgc+=1
 
-        HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name, HECATE_name_source = query_hecate(session, RA[i], Dec[i], _radius)
+        HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name = query_hecate(session, RA[i], Dec[i], _radius)
         if HECATE_matches>0:
             hecate+=1
 
@@ -105,7 +105,6 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
             sdss+=1
 
         # sum the findings, turn into numpy arrays
-        tot_name_sources = numpy.array(GLADE_name_source + GWGC_name_source + HECATE_name_source)
         tot_names = numpy.array(GLADE_name + GWGC_name + HECATE_name)
         tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset)
         tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag)
@@ -130,7 +129,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     print(f"Found {hecate} of {len(RA)} candidates with a HECATE galaxy match.")
     print(f"Found {sdss} of {len(RA)} candidates with a SDSS DR12 Photo-z Catalog galaxy match.")
 
-    all_data = [{'ID_source':tot_name_sources[pcc_args][cond][i],'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
+    all_data = [{'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
 
     return len(PCCS[pcc_args][cond]), all_data
 
@@ -167,14 +166,17 @@ def sort_names(catalog,_dict):
 
     for key in keys:
         if _dict[key]!='null' and _dict[key]!=-1 and _dict[key]!='-':
-            name = _dict[key]
-            source = key
+            if key=='pgc':
+                name = 'PGC'+str(_dict[key])
+            elif key=='wise' or key=='twomass':
+                name = key+_dict[key]
+            else:
+                name = _dict[key]
             break
         if key==keys[-1]:
-            name = _dict[key]
-            source = catalog
+            name = catalog+str(_dict[key])
 
-    return name, source
+    return name
 
 def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
 
@@ -189,7 +191,7 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
     """
     m=0
     # what if no B-mag?
-    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []; name = []; name_source = []
+    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []; name = []
 
     # set up query
     try:
@@ -202,7 +204,6 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
 
     if len(query.all()) > 0:
         m+=1
-        # print('Glade ',GladePlusQ3cRecord.serialize_list(query.all())[0])
         for _x in GladePlusQ3cRecord.serialize_list(query.all()):
             if _x['b']== _x['b']:
                 mag.append(_x['b'])
@@ -216,9 +217,7 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
                 dist_err.append(_x['d_l_err']) # Mpc
                 distflag.append(_x['dist_flag'])
                 source.append('GLADE')
-                best_id, best_id_source = sort_names('GLADE',_x)
-                name.append(best_id)
-                name_source.append(best_id_source)
+                name.append(sort_names('GLADE',_x))
             elif _x['b_j']== _x['b_j']:
                 mag.append(_x['b_j'])
                 filt.append('B_j')
@@ -233,7 +232,7 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
                 source.append('GLADE')
                 best_id, best_id_source = sort_names('GLADE',_x)
                 name.append(best_id)
-                name_source.append(best_id_source)
+                name.append(sort_names('GLADE',_x))
             # else:
             #     mag.append(_x['w1'])
             #     filt.append('W1')
@@ -245,7 +244,7 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
             #     z.append(_x['z_cmb'])
             #     z_err.append(_x['z_err'])
 
-    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, distflag, source, name, name_source
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, distflag, source, name
 
 def query_GWGC(session, ra, dec, _radius, _verbose: bool = True):
 
@@ -253,7 +252,7 @@ def query_GWGC(session, ra, dec, _radius, _verbose: bool = True):
     m=0
     # what if no B-mag?
     gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []
-    name = []; name_source = [];
+    name = []
 
     # set up query
     try:
@@ -266,7 +265,6 @@ def query_GWGC(session, ra, dec, _radius, _verbose: bool = True):
 
     if len(query.all()) > 0:
         m+=1
-        # print('GWGC, ', GwgcQ3cRecord.serialize_list(query.all())[0])
         for _x in GwgcQ3cRecord.serialize_list(query.all()):
             if _x['b_app']== _x['b_app']:
                 mag.append(_x['b_app'])
@@ -279,18 +277,16 @@ def query_GWGC(session, ra, dec, _radius, _verbose: bool = True):
                 dist.append(_x['dist']) # Mpc
                 dist_err.append(_x['e_dist']) # Mpc
                 source.append('GWGC')
-                best_id, best_id_source = sort_names('GWGC',_x)
-                name.append(best_id)
-                name_source.append(best_id_source)
+                name.append(sort_names('GWGC',_x))
 
-    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name, name_source
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name
 
 def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
 
     # Query the HECATE catalog
     m=0
     gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []
-    name = []; name_source = [];
+    name = []
 
     # set up query
     try:
@@ -303,7 +299,6 @@ def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
 
     if len(query.all()) > 0:
         m+=1
-        # print('HECATE, ', HecateQ3cRecord.serialize_list(query.all())[0])
         for _x in HecateQ3cRecord.serialize_list(query.all()):
             if _x['bt']== _x['bt']:
                 mag.append(_x['bt'])
@@ -316,11 +311,9 @@ def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
                 dist.append(_x['d']) # Mpc
                 dist_err.append(_x['e_d']) # Mpc
                 source.append('HECATE')
-                best_id, best_id_source = sort_names('HECATE',_x)
-                name.append(best_id)
-                name_source.append(best_id_source)
+                name.append(sort_names('HECATE',_x))
 
-    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name, name_source
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name
 
 def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
 
