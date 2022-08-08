@@ -32,10 +32,6 @@ def query_ZTFpubphot(t_Event: datetime, RA: float, Dec: float, _radius: float = 
     if _radius <= 0.0:
         raise Exception(f"Invalid input, _radius={_radius}")
 
-    t_querystart = t_Event - timedelta(days=200)
-    t_queryend = datetime.now()
-
-    # connect to database
     try:
         engine = create_engine(DB_CONNECT)
         get_session = sessionmaker(bind=engine)
@@ -55,14 +51,15 @@ def query_ZTFpubphot(t_Event: datetime, RA: float, Dec: float, _radius: float = 
 
     short_keys = ['jd', 'magpsf', 'sigmapsf', 'filtername', 'diffmaglim']
     ztfdict = ZtfQ3cRecord.serialize_list(query.all())
-    # print(ztfdict[0].keys(),ztfdict[0]['candidate']['jd'])
-    # for det in ztfdict:
-    #     print(det)
-    #     raise
     short_ztfdict = {key: [det['candidate'][key] for det in ztfdict] for key in short_keys}
-    print(short_ztfdict)
 
     return short_ztfdict
+
+def ATLAS_forcedphot(t_Event: datetime, RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
+
+    t_querystart = t_Event - timedelta(days=200)
+    t_queryend = datetime.now()
+
 
 if __name__ == '__main__':
 
@@ -77,7 +74,7 @@ if __name__ == '__main__':
 
     try:
         # For ZTF query entire database
-        ztfphot = query_ZTFpubphot(t_Event=a.t_Event, RA=a.RA, Dec =a.Dec, _radius=float(a.radius), _verbose=bool(a.verbose))
+        ztfphot = query_ZTFpubphot(RA=a.RA, Dec =a.Dec, _radius=float(a.radius), _verbose=bool(a.verbose))
         # For ATLAS + other forced phot, only query -200 days
     except Exception as _x:
         print(f"{_x}")
