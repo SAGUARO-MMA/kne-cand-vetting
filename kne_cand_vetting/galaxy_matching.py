@@ -116,7 +116,6 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source)
 
         PCCS = pcc(tot_offsets,tot_mags)
-        print(PCCS)
 
         # put some basic cut on Pcc ?
         pcc_args = numpy.argsort(PCCS)[:10]
@@ -171,7 +170,11 @@ def sort_names(catalog,_dict):
                 name = 'PGC'+str(_dict[key])
             elif key=='wise' or key=='twomass':
                 name = key+_dict[key]
+            elif key=='hyperleda':
+                if key.startswith('SDSS')==False:
+                    name = key+_dict[key]
             else:
+                print(key,_dict[key])
                 name = _dict[key]
             break
         if key==keys[-1]:

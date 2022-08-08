@@ -52,6 +52,9 @@ def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ver
     ztfdict = ZtfQ3cRecord.serialize_list(query.all())
     short_ztfdict = {key: [det['candidate'][key] for det in ztfdict] for key in short_keys}
 
+    if len(short_ztfdict)>0:
+        print('{0} photometric detections found in ZTF.'.format(len(short_ztfdict)))
+
     return short_ztfdict
 
 def ATLAS_forcedphot(t_Event: datetime, RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
