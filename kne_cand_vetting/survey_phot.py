@@ -23,12 +23,11 @@ DB_USER = os.getenv('POSTGRES_USER', 'sassy')
 
 DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-RADIUS_ARCSEC = 20.0
+RADIUS_ARCSEC = 2.0
 
 def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
 
     _radius /= 3600 # converting to Degrees
-    _radius = 0.05
     if _radius <= 0.0:
         raise Exception(f"Invalid input, _radius={_radius}")
 
