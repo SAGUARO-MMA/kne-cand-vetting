@@ -25,7 +25,7 @@ DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB
 
 RADIUS_ARCSEC = 20.0
 
-def query_ZTFpubphot(t_Event: datetime, RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
+def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
 
     _radius /= 3600 # converting to Degrees
     _radius = 0.05
