@@ -48,14 +48,13 @@ def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ver
             print(f"{_e3}")
         print(f"Failed to execute query for RA, Dec = ({RA}, {Dec})")
 
-    short_keys = ['jd', 'magpsf', 'sigmapsf', 'filtername', 'diffmaglim']
-    ztfdict = ZtfQ3cRecord.serialize_list(query.all())
-    short_ztfdict = {key: [det['candidate'][key] for det in ztfdict] for key in short_keys}
+    # short_keys = ['jd', 'magpsf', 'sigmapsf', 'filtername', 'diffmaglim']
+    ztfphot = ZtfQ3cRecord.serialize_list(query.all())
+    # short_ztfdict = [{key: det['candidate'][key] for key in short_keys} for det in ztfdict]
 
-    if len(short_ztfdict)>0:
-        print('{0} photometric detections found in ZTF.'.format(len(short_ztfdict)))
+    print('{0} photometric detection(s) found in ZTF.'.format(len(ztfphot)))
 
-    return short_ztfdict
+    return ztfphot
 
 def ATLAS_forcedphot(t_Event: datetime, RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
 
@@ -75,7 +74,7 @@ if __name__ == '__main__':
     a = params.parse_args()
 
     try:
-        # For ZTF query entire database
+        # For ZTF query over all time
         ztfphot = query_ZTFpubphot(RA=a.RA, Dec =a.Dec, _radius=float(a.radius), _verbose=bool(a.verbose))
         # For ATLAS + other forced phot, only query -200 days
     except Exception as _x:
