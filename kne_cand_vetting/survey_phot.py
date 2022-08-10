@@ -196,8 +196,8 @@ def ATLAS_read_and_sigma_clip_data(filecontent, log, clippingSigma=2.2):
                 row[k] = float(v)
             except:
                 pass
-        # REMOVE VERY HIGH ERROR DATA POINTS & POOR CHI SQUARED
-        if row["duJy"] > 4000 or row["chi/N"] > 100:
+        # REMOVE VERY HIGH ERROR DATA POINTS, POOR CHI SQUARED, OR POOR EPOCHS
+        if row["duJy"] > 4000 or row["chi/N"] > 100 or row['mag5sig']>17.:
             continue
         if row["F"] == "c":
             cepochs.append(row)
@@ -310,7 +310,7 @@ def stack_photometry(magnitudes, binningDays=1.):
                 'n': n,
                 'mag5sig': comb5SigLimit
             })
-    print(allData)
+
     if not len(allData):
         return allData
 
