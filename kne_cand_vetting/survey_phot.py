@@ -197,7 +197,8 @@ def ATLAS_read_and_sigma_clip_data(filecontent, log, clippingSigma=2.2):
             except:
                 pass
         # REMOVE VERY HIGH ERROR DATA POINTS, POOR CHI SQUARED, OR POOR EPOCHS
-        if row["duJy"] > 4000 or row["chi/N"] > 100 or row['mag5sig']>17.:
+        if row["duJy"] > 4000 or row["chi/N"] > 100 or row['mag5sig']<17.:
+            print('removed row')
             continue
         if row["F"] == "c":
             cepochs.append(row)
