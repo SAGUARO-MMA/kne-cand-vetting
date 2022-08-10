@@ -303,14 +303,14 @@ def stack_photometry(magnitudes, binningDays=1.):
             n = len(v["mjds"])
             summedMagnitudes[fil]["n"].append(n)
             allData.append({
-                'mjd': f'{meanMjd:0.2f}',
-                'uJy': f'{meanFLux:0.2f}',
-                'duJy': f'{combError:0.2f}',
+                'mjd': meanMjd,
+                'uJy': meanFLux,
+                'duJy': combError,
                 'F': fil,
                 'n': n,
-                'mag5sig': f'{comb5SigLimit:0.2f}'
+                'mag5sig': comb5SigLimit
             })
-
+    print(allData)
     if not len(allData):
         return allData
 
@@ -333,7 +333,6 @@ if __name__ == '__main__':
         ztfphot = query_ZTFpubphot(RA=a.RA, Dec =a.Dec, _radius=float(a.radius), _verbose=bool(a.verbose))
         # For ATLAS + other forced phot, only query -200 days
         atlasphot = ATLAS_forcedphot(RA=a.RA, Dec=a.Dec, t_Event=a.t_Event, _verbose=bool(a.verbose))
-        print(atlasphot)
     except Exception as _x:
         print(f"{_x}")
         print(f"Use:{__doc__}")
