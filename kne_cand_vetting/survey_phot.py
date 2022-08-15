@@ -38,14 +38,15 @@ RADIUS_ARCSEC = 2.0
 
 logger = logging.getLogger(__name__)
 
-def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False):
+def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False,
+                     db_connect: str = DB_CONNECT):
 
     _radius /= 3600 # converting to Degrees
     if _radius <= 0.0:
         raise Exception(f"Invalid input, _radius={_radius}")
 
     try:
-        engine = create_engine(DB_CONNECT)
+        engine = create_engine(db_connect)
         get_session = sessionmaker(bind=engine)
         session = get_session()
     except Exception as _e2:
