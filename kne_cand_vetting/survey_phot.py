@@ -77,7 +77,7 @@ def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), 
     if token is None:
         token = os.environ.get('ATLASFORCED_SECRET_KEY')
     else:
-        print('Using token from settings_local.py')
+        print('Using provided token')
     if token is None:
         raise Exception('No token provided')
     else:
