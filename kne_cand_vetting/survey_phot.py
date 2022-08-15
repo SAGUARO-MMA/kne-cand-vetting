@@ -68,14 +68,20 @@ def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ver
 
     return ztfphot
 
-def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), _verbose: bool = False):
+def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), _verbose: bool = False,
+                     token: str = None):
 
     BASEURL = "https://fallingstar-data.com/forcedphot"
     # BASEURL = "http://127.0.0.1:8000"
 
-    if os.environ.get('ATLASFORCED_SECRET_KEY'):
+    if token is None:
         token = os.environ.get('ATLASFORCED_SECRET_KEY')
-        print('Using stored token')
+    else:
+        print('Using token from settings_local.py')
+    if token is None:
+        raise Exception('No token provided')
+    else:
+        print('Using token from environment')
 
     headers = {'Authorization': f'Token {token}', 'Accept': 'application/json'}
 
