@@ -198,7 +198,6 @@ def ATLAS_read_and_sigma_clip_data(filecontent, log, clippingSigma=2.2):
                 pass
         # REMOVE VERY HIGH ERROR DATA POINTS, POOR CHI SQUARED, OR POOR EPOCHS
         if row["duJy"] > 4000 or row["chi/N"] > 100 or row['mag5sig']<17.:
-            print('removed row')
             continue
         if row["F"] == "c":
             cepochs.append(row)
@@ -248,7 +247,6 @@ def stack_photometry(magnitudes, binningDays=1.):
     **Return:**
         - `summedMagnitudes` -- the stacked photometry
     """
-    print('starting the ``stack_photometry`` method')
 
     # IF WE WANT TO 'STACK' THE PHOTOMETRY
     summedMagnitudes = {
@@ -311,6 +309,7 @@ def stack_photometry(magnitudes, binningDays=1.):
                 'n': n,
                 'mag5sig': comb5SigLimit
             })
+    print('completed the ``stack_photometry`` method')
 
     if not len(allData):
         return allData
