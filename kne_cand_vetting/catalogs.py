@@ -44,7 +44,8 @@ RADIUS_ARCSEC = 2.0
 # +
 # function: static_cats_query()
 # -
-def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False) -> Optional[list]:
+def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False,
+                      db_connect: str = DB_CONNECT) -> Optional[list]:
 
 
     _radius /= 3600.0 # convert to degrees
@@ -53,7 +54,7 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     # connect to database
     try:
-        engine = create_engine(DB_CONNECT)
+        engine = create_engine(db_connect)
         get_session = sessionmaker(bind=engine)
         session = get_session()
     except Exception as _e2:

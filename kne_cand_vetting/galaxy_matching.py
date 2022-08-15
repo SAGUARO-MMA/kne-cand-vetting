@@ -43,7 +43,8 @@ DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB
 RADIUS_ARCMIN = 3.183
 PCC_THRESHOLD = 0.80
 
-def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_thresh: float = PCC_THRESHOLD, _verbose: bool = False) -> Optional[list]:
+def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_thresh: float = PCC_THRESHOLD,
+                  _verbose: bool = False, db_connect: str = DB_CONNECT) -> Optional[list]:
 
     """
     Searches for galaxy match to candidate in GLADE, HECATE, GWGC, SDSS, Legacy DR8 and PS1-STRM catalogs
@@ -72,7 +73,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
 
     # connect to database
     try:
-        engine = create_engine(DB_CONNECT)
+        engine = create_engine(db_connect)
         get_session = sessionmaker(bind=engine)
         session = get_session()
     except Exception as _e2:
