@@ -96,7 +96,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if GWGC_matches>0:
         gwgc+=1
 
-    HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name = query_hecate(session, RA Dec, _radius)
+    HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name = query_hecate(session, RA, Dec, _radius)
     if HECATE_matches>0:
         hecate+=1
 
