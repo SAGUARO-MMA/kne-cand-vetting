@@ -52,7 +52,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
 
     PARAMETERS
     ----------
-    RA, Dec : transient coordinates, list of floats
+    RA, Dec : transient coordinates, float
         degrees
     _radius : search radius in arcminutes
 
@@ -85,50 +85,53 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     _begin = time.time()
     glade=0; gwgc=0; hecate=0; sdss=0
 
-    for i in range(len(RA)):
 
-        # Find matches in GLADE:
-        GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name = query_GLADE(session, RA[i], Dec[i], _radius)
-        if GLADE_matches>0:
-            glade+=1
+    # Find matches in GLADE:
+    GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name = query_GLADE(session, RA, Dec, _radius)
+    if GLADE_matches>0:
+        glade+=1
 
-        # Find matches in GWGC:
-        GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name = query_GWGC(session, RA[i], Dec[i], _radius)
-        if GWGC_matches>0:
-            gwgc+=1
+    # Find matches in GWGC:
+    GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name = query_GWGC(session, RA, Dec, _radius)
+    if GWGC_matches>0:
+        gwgc+=1
 
-        HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name = query_hecate(session, RA[i], Dec[i], _radius)
-        if HECATE_matches>0:
-            hecate+=1
+    HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name = query_hecate(session, RA Dec, _radius)
+    if HECATE_matches>0:
+        hecate+=1
 
-        SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_dist, SDSS_dist_err, SDSS_source = query_sdss12phot(session, RA[i], Dec[i], _radius)
-        if SDSS_matches>0:
-            sdss+=1
+    SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_dist, SDSS_dist_err, SDSS_source = query_sdss12phot(session, RA, Dec, _radius)
+    if SDSS_matches>0:
+        sdss+=1
 
-        # sum the findings, turn into numpy arrays
-        tot_names = numpy.array(GLADE_name + GWGC_name + HECATE_name)
-        tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset)
-        tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag)
-        tot_ra = numpy.array(GLADE_ra + GWGC_ra + HECATE_ra)
-        tot_dec = numpy.array(GLADE_dec + GWGC_dec + HECATE_dec)
-        tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt)
-        tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist)
-        tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err)
-        tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source)
+    # sum the findings, turn into numpy arrays
+    tot_names = numpy.array(GLADE_name + GWGC_name + HECATE_name)
+    tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset)
+    tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag)
+    tot_ra = numpy.array(GLADE_ra + GWGC_ra + HECATE_ra)
+    tot_dec = numpy.array(GLADE_dec + GWGC_dec + HECATE_dec)
+    tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt)
+    tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist)
+    tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err)
+    tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source)
 
-        PCCS = pcc(tot_offsets,tot_mags)
+    PCCS = pcc(tot_offsets,tot_mags)
 
-        # put some basic cut on Pcc ?
-        pcc_args = numpy.argsort(PCCS)[:10]
-        cond = (PCCS[pcc_args] < _pcc_thresh)
+    # put some basic cut on Pcc ?
+    pcc_args = numpy.argsort(PCCS)[:10]
+    cond = (PCCS[pcc_args] < _pcc_thresh)
 
     _end = time.time()
 
     print(f"Completed galaxy search in {_end-_begin:.3f} sec")
-    print(f"Found {glade} of {len(RA)} candidates with a GLADE galaxy match.")
-    print(f"Found {gwgc} of {len(RA)} candidates with a GWGC galaxy match.")
-    print(f"Found {hecate} of {len(RA)} candidates with a HECATE galaxy match.")
-    print(f"Found {sdss} of {len(RA)} candidates with a SDSS DR12 Photo-z Catalog galaxy match.")
+    if glade==1:
+        print(f"Found a GLADE galaxy match.")
+    if gwgc==1:
+        print(f"Found a GWGC galaxy match.")
+    if hecate==1:
+        print(f"Found a HECATE galaxy match.")
+    if sdss==1:
+        print(f"Found SDSS DR12 Photo-z Catalog galaxy match.")
 
     all_data = [{'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'Offset':tot_offsets[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
 
