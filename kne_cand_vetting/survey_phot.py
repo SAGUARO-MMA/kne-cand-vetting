@@ -75,7 +75,7 @@ def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), 
     # BASEURL = "http://127.0.0.1:8000"
 
     if token is None:
-        token = os.environ.get('ATLASFORCED_SECRET_KEY')
+        token = os.environ.get('ATLAS_API_KEY')
     else:
         print('Using provided token')
     if token is None:
