@@ -13,8 +13,13 @@ import sys
 import time
 import logging
 import numpy as np
+import glob
+from astropy.io import fits
+import datetime
+import subprocess
+import importlib
+import argparse
 
-import requests
 import codecs
 from fundamentals.stats import rolling_window_sigma_clip
 from fundamentals.renderer import list_of_dictionaries
@@ -38,8 +43,7 @@ RADIUS_ARCSEC = 2.0
 
 logger = logging.getLogger(__name__)
 
-def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False,
-                     db_connect: str = DB_CONNECT):
+def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False, db_connect: str = DB_CONNECT):
 
     _radius /= 3600 # converting to Degrees
     if _radius <= 0.0:
@@ -323,6 +327,85 @@ def stack_photometry(magnitudes, binningDays=1.):
 
     return allData
 
+def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None):
+
+    if BOT_ID is None or BOT_NAME is None or API_KEY is None:
+        raise Exception('One or more tokens not provided')
+    else:
+        print('Using tokens from environment')
+
+    get_obj=[("objname",objname), ("objid",""), ("photometry","1"), ("spectra","0")]
+    response=TNS_get(get_obj, BOT_ID, BOT_NAME, API_KEY)
+
+    json_file = is_string_json(response.text)
+    json_data=format_to_json(response.text)
+    result = json.loads(json_data)
+
+    epochs = result['data']['reply']['photometry']
+    allPhot = []
+    for e in epochs:
+        allPhot.append({
+            'jd': e['jd'],
+            'mag': e['flux'],
+            'magerr': e['fluxerr'],
+            'F': e['filters']['name'],
+            'limflux': e['limflux'],
+            'tel': e['telescope']['name']
+        })
+
+    return allPhot
+
+def set_bot_tns_marker(BOT_ID: str = None, BOT_NAME: str = None):
+    tns_marker = 'tns_marker{"tns_id": "' + str(BOT_ID) + '", "type": "bot", "name": "' + BOT_NAME + '"}'
+    return tns_marker
+
+def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None):
+    TNS="sandbox.wis-tns.org"
+    url_tns_api="https://"+TNS+"/api/get"
+    get_url = url_tns_api + "/object"
+    tns_marker = set_bot_tns_marker(BOT_ID, BOT_NAME)
+    headers = {'User-Agent': tns_marker}
+    json_file = OrderedDict(get_obj)
+    get_data = {'api_key': API_KEY, 'data': json.dumps(json_file)}
+    response = requests.post(get_url, headers = headers, data = get_data)
+    return response
+
+def print_response(response, json_file, counter):
+    response_code = str(response.status_code) if json_file == False else str(json_file['id_code'])
+    stats = 'Test #' + str(counter) + '| return code: ' + response_code + \
+            ' | Total Rate-Limit: ' + str(response.headers.get('x-rate-limit-limit')) + \
+            ' | Remaining: ' + str(response.headers.get('x-rate-limit-remaining')) + \
+            ' | Reset: ' + str(response.headers.get('x-rate-limit-reset'))
+    if(response.headers.get('x-cone-rate-limit-limit') != None):
+        stats += ' || Cone Rate-Limit: ' + str(response.headers.get('x-cone-rate-limit-limit')) + \
+                 ' | Cone Remaining: ' + str(response.headers.get('x-cone-rate-limit-remaining')) + \
+                 ' | Cone Reset: ' + str(response.headers.get('x-cone-rate-limit-reset'))
+    print (stats)
+
+def get_reset_time(response):
+    # If any of the '...-remaining' values is zero, return the reset time
+    for name in response.headers:
+        value = response.headers.get(name)
+        if name.endswith('-remaining') and value == '0':
+            return int(response.headers.get(name.replace('remaining', 'reset')))
+    return None
+
+def format_to_json(source):                                          #
+    # change data to json format and return                          #
+    parsed=json.loads(source,object_pairs_hook=OrderedDict)          #
+    result=json.dumps(parsed,indent=4)                               #
+    return result
+
+def is_string_json(string):
+    try:
+        json_object = json.loads(string)
+    except Exception:
+        return False
+    return json_object
+
+def SAGUARO_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), _verbose: bool = False):
+
+    return
 
 if __name__ == '__main__':
 
