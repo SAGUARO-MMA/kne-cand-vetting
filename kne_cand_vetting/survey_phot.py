@@ -46,7 +46,9 @@ RADIUS_ARCSEC = 2.0
 logger = logging.getLogger(__name__)
 
 def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _verbose: bool = False, db_connect: str = DB_CONNECT):
-
+    '''
+    Returns public ZTF photometry hosted on sassy.
+    '''
     _radius /= 3600 # converting to Degrees
     if _radius <= 0.0:
         raise Exception(f"Invalid input, _radius={_radius}")
@@ -76,7 +78,9 @@ def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ver
 
 def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), _verbose: bool = False,
                      token: str = None):
-
+    '''
+    Returns stacked and sigma clipped ATLAS forced photometry.
+    '''
     BASEURL = "https://fallingstar-data.com/forcedphot"
     # BASEURL = "http://127.0.0.1:8000"
 
@@ -330,6 +334,9 @@ def stack_photometry(magnitudes, binningDays=1.):
     return allData
 
 def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None):
+    '''
+    Returns photometry from TNS.
+    '''
 
     if BOT_ID is None or BOT_NAME is None or API_KEY is None:
         raise Exception('One or more tokens not provided')
@@ -372,26 +379,6 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
     response = requests.post(get_url, headers = headers, data = get_data)
     return response
 
-def print_response(response, json_file, counter):
-    response_code = str(response.status_code) if json_file == False else str(json_file['id_code'])
-    stats = 'Test #' + str(counter) + '| return code: ' + response_code + \
-            ' | Total Rate-Limit: ' + str(response.headers.get('x-rate-limit-limit')) + \
-            ' | Remaining: ' + str(response.headers.get('x-rate-limit-remaining')) + \
-            ' | Reset: ' + str(response.headers.get('x-rate-limit-reset'))
-    if(response.headers.get('x-cone-rate-limit-limit') != None):
-        stats += ' || Cone Rate-Limit: ' + str(response.headers.get('x-cone-rate-limit-limit')) + \
-                 ' | Cone Remaining: ' + str(response.headers.get('x-cone-rate-limit-remaining')) + \
-                 ' | Cone Reset: ' + str(response.headers.get('x-cone-rate-limit-reset'))
-    print (stats)
-
-def get_reset_time(response):
-    # If any of the '...-remaining' values is zero, return the reset time
-    for name in response.headers:
-        value = response.headers.get(name)
-        if name.endswith('-remaining') and value == '0':
-            return int(response.headers.get(name.replace('remaining', 'reset')))
-    return None
-
 def format_to_json(source):                                          #
     # change data to json format and return                          #
     parsed=json.loads(source,object_pairs_hook=OrderedDict)          #
@@ -405,9 +392,39 @@ def is_string_json(string):
         return False
     return json_object
 
-def SAGUARO_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), _verbose: bool = False):
+def SAGUARO_forcedphot(RA: float, Dec: float, CSSField: str):
+    '''
+    Gather SAGUARO photometry
+    '''
+    radius = 5./3600
+    SAGUAROPhot = []
+    # Gather individual images from each field --> how to do path to connect sassy to beast?
+    files = sorted(glob.glob('/home/data/css/G96/*/*/G96_*'+CSSField+'*sext.gz'))
 
-    return
+    for f in files:
+        if os.path.exists(f.replace('sext.gz','calb.fz')):
+            data_file = f.replace('sext.gz','calb.fz')
+        else:
+            data_file = f.replace('sext.gz','arch.fz')
+        if not os.path.exists(data_file):
+    	    continue
+        with fits.open(data_file) as hdr:
+            header = hdr[1].header
+            mjd = header['MJD']
+        mag, magerr, flag, ra, dec = np.loadtxt(f,usecols=(3,5,7,11,12),unpack=True)
+        target_mag = mag[(ra>args.ra-radius)&(ra<args.ra+radius)&(dec>args.dec-radius)&(dec<args.dec+radius)]
+        target_magerr = magerr[(ra>args.ra-radius)&(ra<args.ra+radius)&(dec>args.dec-radius)&(dec<args.dec+radius)]
+        target_flag = flag[(ra>args.ra-radius)&(ra<args.ra+radius)&(dec>args.dec-radius)&(dec<args.dec+radius)]
+        try:
+            SAGUAROPhot.append({'mjd':mjd,
+                                'mag':target_mag[0],
+                                'magerrs':target_magerr[0],
+                                'flags':target_flag[0]
+                                })
+        except:
+            continue
+
+    return SAGUAROPhot
 
 if __name__ == '__main__':
 
