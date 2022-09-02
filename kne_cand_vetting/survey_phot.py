@@ -362,7 +362,7 @@ def set_bot_tns_marker(BOT_ID: str = None, BOT_NAME: str = None):
     return tns_marker
 
 def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None):
-    TNS="sandbox.wis-tns.org"
+    TNS="www.wis-tns.org"
     url_tns_api="https://"+TNS+"/api/get"
     get_url = url_tns_api + "/object"
     tns_marker = set_bot_tns_marker(BOT_ID, BOT_NAME)
