@@ -394,13 +394,13 @@ def is_string_json(string):
 
 def SAGUARO_forcedphot(RA: float, Dec: float, CSSField: str):
     '''
-    Gather SAGUARO photometry
+    Queries SAGUARO images for photometry of candidates.
+    Detections come from SExtractor files and upper limits from headers.
     '''
     radius = 5./3600
     SAGUAROPhot = []
     # Gather individual images from each field --> how to do path to connect sassy to beast?
-    files = sorted(glob.glob('/home/data/css/G96/*/*/G96_*'+CSSField+'*sext.gz'))
-
+    files = sorted(glob.glob('http://beast.as.arizona.edu:5013/api/home/data/css/G96/*/*/G96_*'+CSSField+'*sext.gz'))
     for f in files:
         if os.path.exists(f.replace('sext.gz','calb.fz')):
             data_file = f.replace('sext.gz','calb.fz')
@@ -419,10 +419,22 @@ def SAGUARO_forcedphot(RA: float, Dec: float, CSSField: str):
             SAGUAROPhot.append({'mjd':mjd,
                                 'mag':target_mag[0],
                                 'magerrs':target_magerr[0],
-                                'flags':target_flag[0]
+                                'flags':target_flag[0],
                                 })
         except:
             continue
+
+    # Get upper limit from headers, files have been moved to CSS folder on beast
+    limitfiles = sorted(glob.glob('http://beast.as.arizona.edu:5013/api/home/data/css/red/*/*/G96_*'+CSSField+'*_trans.fits.fz'))
+
+    # Use most recent observation of field for upper limit
+    with fits.open(limitfiles[-1]) as hdr:
+        mjd = hdr[1].header['MJD']
+        upper_mag = hdr[1].header['T-LMAG']
+
+    SAGUAROPhot.append({'mjd':mjd,
+                        'limit':upper_mag,
+                        })
 
     return SAGUAROPhot
 
