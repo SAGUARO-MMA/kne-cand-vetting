@@ -11,8 +11,8 @@ from sassy_q3c_models.gwgc_q3c_orm import GwgcQ3cRecord
 from sassy_q3c_models.gwgc_q3c_orm_filters import gwgc_q3c_orm_filters
 from sassy_q3c_models.hecate_q3c_orm import HecateQ3cRecord
 from sassy_q3c_models.hecate_q3c_orm_filters import hecate_q3c_orm_filters
-from sassy_q3c_models.sdss12phot_q3c_orm import Sdss12PhotQ3cRecord
-from sassy_q3c_models.sdss12phot_q3c_orm_filters import sdss12phot_q3c_orm_filters
+from sassy_q3c_models.sdss12photoz_q3c_orm import Sdss12PhotoZQ3cRecord
+from sassy_q3c_models.sdss12photoz_q3c_orm_filters import sdss12photoz_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -64,8 +64,8 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     pcc : probability of chance coincidence, list of floats
     offset : transient-galaxy offset, list of floats
         arcseconds
-    zspec : spectroscopic redshift, -99.0 if none, list of floats
-    zphot : photometric redshift, -99.0 if none, list of floats
+    dist : spectroscopic redshift, -99.0 if none, list of floats
+    z : photometric redshift, -99.0 if none, list of floats
     etc.
     """
 
@@ -85,7 +85,6 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     _begin = time.time()
     glade=0; gwgc=0; hecate=0; sdss=0
 
-
     # Find matches in GLADE:
     GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name = query_GLADE(session, RA, Dec, _radius)
     if GLADE_matches>0:
@@ -100,7 +99,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if HECATE_matches>0:
         hecate+=1
 
-    SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_dist, SDSS_dist_err, SDSS_source = query_sdss12phot(session, RA, Dec, _radius)
+    SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source = query_sdss12phot(session, RA, Dec, _radius)
     if SDSS_matches>0:
         sdss+=1
 
@@ -113,6 +112,8 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt)
     tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist)
     tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err)
+    tot_z = numpy.tile(np.nan,len(GLADE_name)) + numpy.tile(np.nan,len(GWGC_name)) + numpy.tile(np.nan,len(HECATE_name)) + numpy.array(SDSS_z)
+    tot_zerr = numpy.tile(np.nan,len(GLADE_name)) + numpy.tile(np.nan,len(GWGC_name)) + numpy.tile(np.nan,len(HECATE_name)) + numpy.array(SDSS_zerr)
     tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
@@ -133,7 +134,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if sdss==1:
         print(f"Found SDSS DR12 Photo-z Catalog galaxy match.")
 
-    all_data = [{'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'Offset':tot_offsets[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
+    all_data = [{'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'Offset':tot_offsets[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'z':tot_z[pcc_args][cond][i],'zErr':tot_zerr[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
 
     return len(PCCS[pcc_args][cond]), all_data
 
@@ -241,16 +242,6 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
                 best_id, best_id_source = sort_names('GLADE',_x)
                 name.append(best_id)
                 name.append(sort_names('GLADE',_x))
-            # else:
-            #     mag.append(_x['w1'])
-            #     filt.append('W1')
-            #     gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
-            #     cand = SkyCoord(ra*u.deg, dec*u.deg)
-            #     gal_offset.append(cand.separation(gal).arcsec)
-            #     gal_ra.append(_x['ra'])
-            #     gal_dec.append(_x['dec'])
-            #     z.append(_x['z_cmb'])
-            #     z_err.append(_x['z_err'])
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, distflag, source, name
 
@@ -328,12 +319,12 @@ def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
     # Query the SDSS DR12 Photo-z Catalog
 
     m=0
-    gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = [];
-    gal_dec = []; distflag = []; source = []; dist_q = []
+    gal_offset = []; mag = []; filt = []; z = []; z_err = []; gal_ra = [];
+    gal_dec = []; source = []; name = []
 
     try:
-        query = session.query(Sdss12PhotQ3cRecord)
-        query = sdss12phot_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+        query = session.query(Sdss12PhotoZQ3cRecord)
+        query = sdss12photoz_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
     except Exception as _e3:
         if _verbose:
             print(f"{_e3}")
@@ -342,9 +333,18 @@ def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
     # print(query.all())
     if len(query.all()) > 0:
         m+=1
-        print('SDSS, ', Sdss12PhotQ3cRecord.serialize_list(query.all())[0])
-        for _x in Sdss12PhotQ3cRecord.serialize_list(query.all()):
+        for _x in Sdss12PhotoZQ3cRecord.serialize_list(query.all()):
             if _x['rmag']== _x['rmag']:
+                if _x['zsp']==_x['zsp']:
+                    print(_x)
+                    z.append(_x['zsp'])
+                    z_err.append(0.) # no error for redshift
+                elif _x['zph']==_x['zph']:
+                    print(_x)
+                    z.append(_x['zph'])
+                    z_err.append(0.)
+                else:
+                    continue
                 mag.append(_x['rmag'])
                 filt.append('r')
                 gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
@@ -352,16 +352,10 @@ def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
                 gal_offset.append(cand.separation(gal).arcsec)
                 gal_ra.append(_x['ra'])
                 gal_dec.append(_x['dec'])
+                source.append('SDSS_DR12')
+                name.append(_x['sdss12'])
 
-                # print(_x)
-
-                # Split spec and photo-z:
-                # if _x['z_sp']
-                # dist.append(_x['d']) # Mpc
-                # dist_err.append(_x['e_d']) # Mpc
-                # source.append('SDSS_DR12')
-
-    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
 
 
 if __name__ == '__main__':
@@ -377,8 +371,13 @@ if __name__ == '__main__':
 
     # execute
     try:
+        # engine = create_engine(DB_CONNECT)
+        # get_session = sessionmaker(bind=engine)
+        # session = get_session()
         output = galaxy_search(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _pcc_thresh=float(_a.pcc_threshold), _verbose=bool(_a.verbose))
-        # print(qprob, qso, qoffset)
+        # output = query_sdss12phot(session, _a.RA[0], _a.Dec[0], _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        print('Finished.')
+        print(output)
     except Exception as _x:
         print(f"{_x}")
         print(f"Use:{__doc__}")
