@@ -99,22 +99,22 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if HECATE_matches>0:
         hecate+=1
 
-    SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source = query_sdss12phot(session, RA, Dec, _radius)
+    SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source, SDSS_name = query_sdss12phot(session, RA, Dec, _radius)
     if SDSS_matches>0:
         sdss+=1
 
     # sum the findings, turn into numpy arrays
-    tot_names = numpy.array(GLADE_name + GWGC_name + HECATE_name)
-    tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset)
-    tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag)
-    tot_ra = numpy.array(GLADE_ra + GWGC_ra + HECATE_ra)
-    tot_dec = numpy.array(GLADE_dec + GWGC_dec + HECATE_dec)
-    tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt)
-    tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist)
-    tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err)
+    tot_names = numpy.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name)
+    tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset)
+    tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag)
+    tot_ra = numpy.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra)
+    tot_dec = numpy.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec)
+    tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt)
+    tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist) + numpy.tile(np.nan,len(SDSS_name))
+    tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err) + numpy.tile(np.nan,len(SDSS_name))
     tot_z = numpy.tile(np.nan,len(GLADE_name)) + numpy.tile(np.nan,len(GWGC_name)) + numpy.tile(np.nan,len(HECATE_name)) + numpy.array(SDSS_z)
     tot_zerr = numpy.tile(np.nan,len(GLADE_name)) + numpy.tile(np.nan,len(GWGC_name)) + numpy.tile(np.nan,len(HECATE_name)) + numpy.array(SDSS_zerr)
-    tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source)
+    tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
 
