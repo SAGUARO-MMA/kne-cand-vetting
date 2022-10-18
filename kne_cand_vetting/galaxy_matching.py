@@ -3,7 +3,7 @@
 from astropy.io import ascii
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import numpy
+import numpy as np
 
 from sassy_q3c_models.glade_plus_q3c_orm import GladePlusQ3cRecord
 from sassy_q3c_models.glade_plus_q3c_orm_filters import glade_plus_q3c_orm_filters
@@ -104,22 +104,22 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         sdss+=1
 
     # sum the findings, turn into numpy arrays
-    tot_names = numpy.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name)
-    tot_offsets = numpy.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset)
-    tot_mags = numpy.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag)
-    tot_ra = numpy.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra)
-    tot_dec = numpy.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec)
-    tot_filt = numpy.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt)
-    tot_dists = numpy.array(GLADE_dist + GWGC_dist + HECATE_dist) + numpy.tile(np.nan,len(SDSS_name))
-    tot_dist_errs = numpy.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err) + numpy.tile(np.nan,len(SDSS_name))
-    tot_z = numpy.tile(np.nan,len(GLADE_name)) + numpy.tile(np.nan,len(GWGC_name)) + numpy.tile(np.nan,len(HECATE_name)) + numpy.array(SDSS_z)
-    tot_zerr = numpy.tile(np.nan,len(GLADE_name)) + numpy.tile(np.nan,len(GWGC_name)) + numpy.tile(np.nan,len(HECATE_name)) + numpy.array(SDSS_zerr)
-    tot_source = numpy.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source)
+    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name)
+    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset)
+    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag)
+    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra)
+    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec)
+    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt)
+    tot_dists = np.array(GLADE_dist + GWGC_dist + HECATE_dist) + np.tile(np.nan,len(SDSS_name))
+    tot_dist_errs = np.array(GLADE_dist_err + GWGC_dist_err + HECATE_dist_err) + np.tile(np.nan,len(SDSS_name))
+    tot_z = np.tile(np.nan,len(GLADE_name)) + np.tile(np.nan,len(GWGC_name)) + np.tile(np.nan,len(HECATE_name)) + np.array(SDSS_z)
+    tot_zerr = np.tile(np.nan,len(GLADE_name)) + np.tile(np.nan,len(GWGC_name)) + np.tile(np.nan,len(HECATE_name)) + np.array(SDSS_zerr)
+    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
 
     # put some basic cut on Pcc ?
-    pcc_args = numpy.argsort(PCCS)[:10]
+    pcc_args = np.argsort(PCCS)[:10]
     cond = (PCCS[pcc_args] < _pcc_thresh)
 
     _end = time.time()
@@ -152,8 +152,8 @@ def pcc(r,m):
     -------
     Pcc values : array of floats [0,1]
     """
-    sigma = (1/(0.33*numpy.log(10)))*10**(0.33*(m-24)-2.44)
-    prob = 1-numpy.exp(-(numpy.pi*(r**2)*sigma))
+    sigma = (1/(0.33*np.log(10)))*10**(0.33*(m-24)-2.44)
+    prob = 1-np.exp(-(np.pi*(r**2)*sigma))
 
     return prob
 
