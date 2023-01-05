@@ -81,7 +81,6 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
             print(f"{_e2}")
         raise Exception(f"Failed to connect to database")
 
-    # loop through RA, Dec here
     _begin = time.time()
     glade=0; gwgc=0; hecate=0; sdss=0
 
@@ -110,10 +109,10 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra)
     tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec)
     tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt)
-    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, np.tile(np.nan, len(SDSS_name))])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, np.tile(np.nan, len(SDSS_name))])
-    tot_z = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_z])
-    tot_zerr = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_zerr])
+    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, np.tile(np.nan, SDSS_matches)])
+    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, np.tile(np.nan, SDSS_matches)])
+    tot_z = np.concatenate([np.tile(np.nan, GLADE_matches + GWGC_matches + HECATE_matches), SDSS_z])
+    tot_zerr = np.concatenate([np.tile(np.nan, GLADE_matches + GWGC_matches + HECATE_matches), SDSS_zerr])
     tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
