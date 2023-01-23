@@ -12,6 +12,8 @@ from sassy_q3c_models.milliquas_q3c_orm import MilliQuasQ3cRecord
 from sassy_q3c_models.milliquas_q3c_orm_filters import milliquas_q3c_orm_filters
 from sassy_q3c_models.asassn_q3c_orm import AsAssnQ3cRecord
 from sassy_q3c_models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
+from sassy_q3c_models.tns_q3c_orm import TnsQ3cRecord
+from sassy_q3c_models.tns_q3c_orm_filters import tns_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -73,9 +75,11 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     asassnprob, asassn, asassnoffset = asassn_query(session, _coords, _names, _radius)
 
+    tns_results = [tns_query(session, ra, dec, _radius) for ra, dec in _coords]
+
     session.close()
 
-    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset
+    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
@@ -171,6 +175,15 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
     print(f"Found {match} variable stars in {len(coords)} candidates")
 
     return starprob, star, staroffset
+
+
+def tns_query(session, ra, dec, radius):
+    """Query the Transient Name Server for matches to a kilonova candidate"""
+    query = session.query(TnsQ3cRecord)
+    query = tns_q3c_orm_filters(query, {'cone': f'{ra},{dec},{radius}'})
+    tns_match = query.first()
+    if tns_match is not None:
+        return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype
 
 
 # +
