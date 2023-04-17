@@ -1,6 +1,5 @@
 # JCR May 2022, adapted from Charlie Kilpatrick, Vic Dong et al.
 
-from astropy.io import ascii
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import numpy as np
@@ -16,10 +15,8 @@ from sassy_q3c_models.sdss12photoz_q3c_orm_filters import sdss12photoz_q3c_orm_f
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
-from astropy import cosmology
 from astropy import units as u
 from astropy.cosmology import FlatLambdaCDM
-from astropy.cosmology import z_at_value
 cosmo = FlatLambdaCDM(H0=69.6 * u.km / u.s / u.Mpc, Tcmb0=2.725 * u.K, Om0=0.3)
 
 import argparse
