@@ -13,7 +13,6 @@ import logging
 import numpy as np
 import glob
 from astropy.io import fits
-import datetime
 import argparse
 from collections import OrderedDict
 import json
