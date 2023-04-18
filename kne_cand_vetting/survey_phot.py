@@ -1,13 +1,11 @@
 ### Query public surveys for photometric detections prior to GW event
 ### Currently working on ZTF only
 
-from astropy.coordinates import SkyCoord
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from astropy.time import Time
 import os
 import requests
-import argparse
 from datetime import datetime, timedelta
 import sys
 import time
@@ -15,22 +13,18 @@ import logging
 import numpy as np
 import glob
 from astropy.io import fits
-import datetime
-import subprocess
-import importlib
 import argparse
 from collections import OrderedDict
 import json
+import csv
+import re
 
-import codecs
 from fundamentals.stats import rolling_window_sigma_clip
-from fundamentals.renderer import list_of_dictionaries
 from operator import itemgetter
 from past.utils import old_div
 
 from sassy_q3c_models.ztf_q3c_orm import ZtfQ3cRecord
-from sassy_q3c_models.ztf_q3c_orm_filters import *
-from sassy_q3c_models.ztf_q3c_orm_cli import *
+from sassy_q3c_models.ztf_q3c_orm_filters import ztf_q3c_orm_filters
 
 # constants -- are these still needed?
 DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
@@ -281,7 +275,7 @@ def stack_photometry(magnitudes, binningDays=1.):
         distinctMjds = {}
         for mjd, flx, err, lim in zip(data["mjds"], data["mags"], data["magErrs"], data["lim5sig"]):
             # DICT KEY IS THE UNIQUE INTEGER MJD
-            key = str(int(math.floor(mjd / float(binningDays))))
+            key = str(int(np.floor(mjd / float(binningDays))))
             # FIRST DATA POINT OF THE NIGHTS? CREATE NEW DATA SET
             if key not in distinctMjds:
                 distinctMjds[key] = {
@@ -308,11 +302,11 @@ def stack_photometry(magnitudes, binningDays=1.):
             summedMagnitudes[fil]["mags"].append(meanFLux)
             # GIVE ME THE COMBINED ERROR
             combError = sum(v["magErrs"]) / len(v["magErrs"]
-                                                ) / math.sqrt(len(v["magErrs"]))
+                                                ) / np.sqrt(len(v["magErrs"]))
             summedMagnitudes[fil]["magErrs"].append(combError)
             # 5-sigma limits
             # combine duJy errors in quadrature, convert to cgs
-            combFnuErr = math.sqrt(sum(mag**2 for mag in v["magErrs"])) * 1e-29
+            combFnuErr = np.sqrt(sum(mag**2 for mag in v["magErrs"])) * 1e-29
             comb5SigLimit = -2.5*np.log10(5*combFnuErr) - 48.6
             summedMagnitudes[fil]["lim5sig"].append(comb5SigLimit)
             # GIVE ME NUMBER OF DATA POINTS COMBINED
@@ -412,9 +406,9 @@ def SAGUARO_forcedphot(RA: float, Dec: float, CSSField: str):
             header = hdr[1].header
             mjd = header['MJD']
         mag, magerr, flag, ra, dec = np.loadtxt(f,usecols=(3,5,7,11,12),unpack=True)
-        target_mag = mag[(ra>args.ra-radius)&(ra<args.ra+radius)&(dec>args.dec-radius)&(dec<args.dec+radius)]
-        target_magerr = magerr[(ra>args.ra-radius)&(ra<args.ra+radius)&(dec>args.dec-radius)&(dec<args.dec+radius)]
-        target_flag = flag[(ra>args.ra-radius)&(ra<args.ra+radius)&(dec>args.dec-radius)&(dec<args.dec+radius)]
+        target_mag = mag[(ra>RA-radius)&(ra<RA+radius)&(dec>Dec-radius)&(dec<Dec+radius)]
+        target_magerr = magerr[(ra>RA-radius)&(ra<RA+radius)&(dec>Dec-radius)&(dec<Dec+radius)]
+        target_flag = flag[(ra>RA-radius)&(ra<RA+radius)&(dec>Dec-radius)&(dec<Dec+radius)]
         try:
             SAGUAROPhot.append({'mjd':mjd,
                                 'mag':target_mag[0],

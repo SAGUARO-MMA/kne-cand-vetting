@@ -4,10 +4,8 @@
 # +
 # import(s)
 # -
-from astropy.io import ascii
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sassy_q3c_models import *
 from sassy_q3c_models.milliquas_q3c_orm import MilliQuasQ3cRecord
 from sassy_q3c_models.milliquas_q3c_orm_filters import milliquas_q3c_orm_filters
 from sassy_q3c_models.asassn_q3c_orm import AsAssnQ3cRecord
@@ -218,7 +216,7 @@ def gaia_query(ra,dec,rad=2):
     ----------
     ra, dec : array of floats
         degrees
-    radius : float
+    rad : float
         default = 2, arcseconds
 
     RETURNS

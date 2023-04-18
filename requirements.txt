@@ -3,6 +3,5 @@
 numpy
 astropy
 sqlalchemy
-pandas
 fundamentals
-sassy_q3c_models @ git+https://github.com/SAGUARO-MMA/sassy_q3c_models
+sassy_q3c_models @ git+https://github.com/SAGUARO-MMA/sassy_q3c_models@update_reqs
