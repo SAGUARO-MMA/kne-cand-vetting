@@ -4,4 +4,4 @@ numpy
 astropy
 sqlalchemy
 fundamentals
-sassy_q3c_models @ git+https://github.com/SAGUARO-MMA/sassy_q3c_models@update_reqs
+sassy_q3c_models @ git+https://github.com/SAGUARO-MMA/sassy_q3c_models
