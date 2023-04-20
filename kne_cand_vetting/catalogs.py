@@ -12,8 +12,8 @@ from sassy_q3c_models.asassn_q3c_orm import AsAssnQ3cRecord
 from sassy_q3c_models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
 from sassy_q3c_models.tns_q3c_orm import TnsQ3cRecord
 from sassy_q3c_models.tns_q3c_orm_filters import tns_q3c_orm_filters
-from sassy_q3c_models.gaia_q3c_orm import GaiaDR3VariableQ3cRecord
-from sassy_q3c_models.gaia_q3c_orm_read import GAIADR3VARIABLE_q3c_read
+from sassy_q3c_models.gaiadr3variable_q3c_orm import GaiaDR3VariableQ3cRecord
+from sassy_q3c_models.gaiadr3variable_q3c_read import GAIADR3VARIABLE_q3c_read
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
