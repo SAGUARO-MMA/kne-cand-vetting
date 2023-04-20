@@ -12,6 +12,8 @@ from sassy_q3c_models.asassn_q3c_orm import AsAssnQ3cRecord
 from sassy_q3c_models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
 from sassy_q3c_models.tns_q3c_orm import TnsQ3cRecord
 from sassy_q3c_models.tns_q3c_orm_filters import tns_q3c_orm_filters
+from sassy_q3c_models.gaia_q3c_orm import GaiaDR3VariableQ3cRecord
+from sassy_q3c_models.gaia_q3c_orm_read import GAIADR3VARIABLE_q3c_read
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -38,7 +40,6 @@ DB_PORT = os.getenv('POSTGRES_PORT', 5432)
 DB_USER = os.getenv('POSTGRES_USER', 'sassy')
 
 DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-FILE = os.path.abspath(os.path.expanduser("comb_master_FINAL.dat"))
 RADIUS_ARCSEC = 2.0
 
 # +
@@ -72,6 +73,8 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
     qprob, qso, qoffset = milliquas_query(session, _coords, _names, _radius)
 
     asassnprob, asassn, asassnoffset = asassn_query(session, _coords, _names, _radius)
+
+    gaiaprob, gaias, gaiaoffset, gaiaclass = gaia_query(session, _coords, _names, _radius)
 
     tns_results = [tns_query(session, ra, dec, _radius) for ra, dec in _coords]
 
@@ -183,6 +186,49 @@ def tns_query(session, ra, dec, radius):
     if tns_match is not None:
         return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype
 
+def gaia_query(session, coords, names, _radius, _verbose: bool = False):
+    '''
+    Query Gaia eDR3 for a variable star match
+    '''
+    starprob = []; star = []; staroffset = []; starclass = []
+    match=0
+
+    for _i, _e in enumerate(coords):
+
+        # set up query
+        try:
+            query = session.query(GaiaDR3VariableQ3cRecord)
+            query = gaia_q3c_orm_read(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
+        except Exception as _e3:
+            if _verbose:
+                print(f"{_e3}")
+            print(f"Failed to execute query for RA, Dec = ({_e[0]}, {_e[1]}), index={_i}")
+            continue
+        # execute the query
+        if len(query.all()) == 0:
+            star.append('None')
+            starprob.append(0.0)
+            staroffset.append(-99.0)
+            starclass.append('None')
+        else:
+            match+=1
+            for _x in GaiaDR3VariableQ3cRecord.serialize_list(query.all()):
+                print(f'>>> Gaia Star MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
+
+                star.append(_x['sid'])
+                starprob.append(1.0)
+                starclass.append(_x['classification'])
+
+                gaia = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
+                staroffset.append(cand.separation(gaia).arcsec)
+
+    _end = time.time()
+
+    print(f"Found {match} variable stars in {len(coords)} candidates")
+
+    return starprob, star, staroffset, starclass
+
 
 # +
 # main()
@@ -199,72 +245,8 @@ if __name__ == '__main__':
 
     # execute
     try:
-        asassnprob, asassn, asassnoffset, qprob, qso, qoffset = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        asassnprob, asassn, asassnoffset, qprob, qso, qoffset, gaiaprob, gaias, gaiaoffset, gaiaclass = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
         # print(qprob, qso, qoffset)
     except Exception as _x:
         print(f"{_x}")
         print(f"Use:{__doc__}")
-
-
-
-### DOES NOT WORK
-def gaia_query(ra,dec,rad=2):
-    '''
-    Query Gaia eDR3 for a variable star match
-
-    PARAMETERS
-    ----------
-    ra, dec : array of floats
-        degrees
-    rad : float
-        default = 2, arcseconds
-
-    RETURNS
-    -------
-    match : array of floats
-        1. = match to Gaia source meeting criteria 0. = no match
-
-    '''
-    coords = SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
-    print(coords)
-
-    # Query statement --> recall you're using an array
-
-    dist = (r['dist'].data*u.deg).to(u.arcsec) # perhaps distance from center? units = degrees?
-    pmra = r['pmra'] # proper motion, RA in mas/yr
-    pmdec = r['pmdec'] # proper motion, Dec in mas/yr
-    pmra_err = r['pmra_error'] # in mas/yr
-    pmdec_err = r['pmdec_error'] # in mas/yr
-    variable_flag = r['phot_variable_flag'] # flag for variable stars
-    parallax_sig = r['parallax_over_error'] # parallax over error
-
-    if len(dist) != 0: # meaning, a match is found
-
-        pmra=pmra[0]
-        pmdec=pmdec[0]
-        pmra_err=pmra_err[0]
-        pmdec_err=pmdec_err[0]
-        parallax_sig = parallax_sig[0]
-
-        pm_tot = (pmra**2 + pmdec**2)**.5 # find magnitude of proper motion
-
-        err_pm_tot = (pmra_err**2 + pmdec_err**2)**.5 # find magnitude of proper motion error
-
-        vf = variable_flag[0].decode("utf-8") # make variable flag readable
-
-        # conditions for ruling a match out as a star:
-        # 1) proper motion > 3 x PM error
-        # 2) parallax significance > 8 (more details in Tachibana & Miller 2018)
-        # 3) Gaia has flagged source as a variable star (very few)
-
-        if pm_tot > 3*err_pm_tot or parallax_sig > 8 or vf=='VARIABLE':
-            print('star: ',vf,pm_tot,err_pm_tot)
-            return 1.0
-
-        else:
-            return 0.0 # match in Gaia, but did not meet criteria of being stellar
-
-    else:
-        return -99.0 # no match in Gaia
-
-    return coords # q
