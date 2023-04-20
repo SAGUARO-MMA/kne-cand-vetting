@@ -80,7 +80,7 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     session.close()
 
-    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results
+    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results, gaiaprob, gaias, gaiaoffset, gaiaclass
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
