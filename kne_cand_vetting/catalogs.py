@@ -78,11 +78,13 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     gaiaprob, gaias, gaiaoffset, gaiaclass = gaia_query(session, _coords, _names, _radius)
 
+    ps1prob, ps1, ps1offset, ps1mult = ps1_ps_query(session, _coords, _names, _radius)
+
     tns_results = [tns_query(session, ra, dec, _radius) for ra, dec in _coords]
 
     session.close()
 
-    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results, gaiaprob, gaias, gaiaoffset, gaiaclass
+    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results, gaiaprob, gaias, gaiaoffset, gaiaclass, ps1prob, ps1, ps1offset, ps1mult
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
@@ -234,9 +236,9 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
 def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
 
     '''
-    Query Gaia DR3 for a variable star match
+    Query PS1 point source catalog for a variable star match
     '''
-    starprob = []; star = []; staroffset = []; multiple = []
+    starprob = []; star = []; staroffset = []
     match=0
 
     for _i, _e in enumerate(coords):
@@ -250,22 +252,21 @@ def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
                 print(f"{_e3}")
             print(f"Failed to execute query for RA, Dec = ({_e[0]}, {_e[1]}), index={_i}")
             continue
+
         # execute the query
         if len(query.all()) == 0:
             star.append('None')
             starprob.append(0.0)
             staroffset.append(-99.0)
-            multiple.append('None')
 
         elif len(query.all())>1:
-            star.append('None')
+            star.append('Multiple matches')
             starprob.append(0.0)
             staroffset.append(-99.0)
-            multiple.append('Multiple matches')
 
         else:
             match+=1
-            for _x in GaiaDR3VariableQ3cRecord.serialize_list(query.all()):
+            for _x in Ps1Q3cRecord.serialize_list(query.all()):
                 print(f'>>> PS1 source MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
 
                 if _x['ps_score']>0.83:
@@ -275,7 +276,6 @@ def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
                     ps1 = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
                     cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
                     staroffset.append(cand.separation(ps1).arcsec)
-                    multiple.append('None')
 
                 else:
                     star.append('Galaxy match')
@@ -283,7 +283,6 @@ def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
                     ps1 = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
                     cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
                     staroffset.append(cand.separation(ps1).arcsec)
-                    multiple.append('None')
                 
 
     _end = time.time()
