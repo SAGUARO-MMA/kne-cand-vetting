@@ -289,7 +289,7 @@ def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
 
     print(f"Found {match} variable stars in {len(coords)} candidates")
 
-    return starprob, star, staroffset, multiples
+    return starprob, star, staroffset
 
 
 # +
