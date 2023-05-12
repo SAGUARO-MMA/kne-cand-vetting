@@ -78,13 +78,13 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     gaiaprob, gaias, gaiaoffset, gaiaclass = gaia_query(session, _coords, _names, _radius)
 
-    ps1prob, ps1, ps1offset, ps1mult = ps1_ps_query(session, _coords, _names, _radius)
+    ps1prob, ps1, ps1offset = ps1_ps_query(session, _coords, _names, _radius)
 
     tns_results = [tns_query(session, ra, dec, _radius) for ra, dec in _coords]
 
     session.close()
 
-    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results, gaiaprob, gaias, gaiaoffset, gaiaclass, ps1prob, ps1, ps1offset, ps1mult
+    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results, gaiaprob, gaias, gaiaoffset, gaiaclass, ps1prob, ps1, ps1offset
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
