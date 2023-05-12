@@ -13,7 +13,7 @@ from sassy_q3c_models.asassn_q3c_orm_filters import asassn_q3c_orm_filters
 from sassy_q3c_models.tns_q3c_orm import TnsQ3cRecord
 from sassy_q3c_models.tns_q3c_orm_filters import tns_q3c_orm_filters
 from sassy_q3c_models.gaiadr3variable_q3c_orm import GaiaDR3VariableQ3cRecord
-from sassy_q3c_models.gaiadr3variable_q3c_read import GAIADR3VARIABLE_q3c_read
+from sassy_q3c_models.gaiadr3variable_q3c_orm_filters import gaiadr3variable_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -198,7 +198,7 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
         # set up query
         try:
             query = session.query(GaiaDR3VariableQ3cRecord)
-            query = gaia_q3c_orm_read(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
+            query = gaiadr3variable_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
         except Exception as _e3:
             if _verbose:
                 print(f"{_e3}")
