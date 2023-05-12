@@ -14,6 +14,8 @@ from sassy_q3c_models.tns_q3c_orm import TnsQ3cRecord
 from sassy_q3c_models.tns_q3c_orm_filters import tns_q3c_orm_filters
 from sassy_q3c_models.gaiadr3variable_q3c_orm import GaiaDR3VariableQ3cRecord
 from sassy_q3c_models.gaiadr3variable_q3c_orm_filters import gaiadr3variable_q3c_orm_filters
+from sassy_q3c_models.ps1_q3c_orm import Ps1Q3cRecord
+from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -188,7 +190,7 @@ def tns_query(session, ra, dec, radius):
 
 def gaia_query(session, coords, names, _radius, _verbose: bool = False):
     '''
-    Query Gaia eDR3 for a variable star match
+    Query Gaia DR3 for a variable star match
     '''
     starprob = []; star = []; staroffset = []; starclass = []
     match=0
@@ -228,6 +230,67 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
     print(f"Found {match} variable stars in {len(coords)} candidates")
 
     return starprob, star, staroffset, starclass
+
+def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
+
+    '''
+    Query Gaia DR3 for a variable star match
+    '''
+    starprob = []; star = []; staroffset = []; multiple = []
+    match=0
+
+    for _i, _e in enumerate(coords):
+
+        # set up query
+        try:
+            query = session.query(Ps1Q3cRecord)
+            query = ps1_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
+        except Exception as _e3:
+            if _verbose:
+                print(f"{_e3}")
+            print(f"Failed to execute query for RA, Dec = ({_e[0]}, {_e[1]}), index={_i}")
+            continue
+        # execute the query
+        if len(query.all()) == 0:
+            star.append('None')
+            starprob.append(0.0)
+            staroffset.append(-99.0)
+            multiple.append('None')
+
+        elif len(query.all())>1:
+            star.append('None')
+            starprob.append(0.0)
+            staroffset.append(-99.0)
+            multiple.append('Multiple matches')
+
+        else:
+            match+=1
+            for _x in GaiaDR3VariableQ3cRecord.serialize_list(query.all()):
+                print(f'>>> PS1 source MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
+
+                if _x['ps_score']>0.83:
+
+                    star.append(_x['pid'])
+                    starprob.append(_x['ps_score'])
+                    ps1 = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                    cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
+                    staroffset.append(cand.separation(ps1).arcsec)
+                    multiple.append('None')
+
+                else:
+                    star.append('Galaxy match')
+                    starprob.append(_x['ps_score'])
+                    ps1 = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                    cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
+                    staroffset.append(cand.separation(ps1).arcsec)
+                    multiple.append('None')
+                
+
+    _end = time.time()
+
+    print(f"Found {match} variable stars in {len(coords)} candidates")
+
+    return starprob, star, staroffset, multiples
 
 
 # +
