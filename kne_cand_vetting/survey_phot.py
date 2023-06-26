@@ -70,7 +70,7 @@ def query_ZTFpubphot(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ver
 
     return ztfphot
 
-def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), _verbose: bool = False,
+def ATLAS_forcedphot(RA: float, Dec: float, days_ago: float = 200., _verbose: bool = False,
                      token: str = None):
     '''
     Returns stacked and sigma clipped ATLAS forced photometry.
@@ -89,8 +89,8 @@ def ATLAS_forcedphot(RA: float, Dec: float, t_Event: datetime = datetime.now(), 
 
     headers = {'Authorization': f'Token {token}', 'Accept': 'application/json'}
 
-    t_querystart = Time(t_Event - timedelta(days=200),scale='utc').to_value('mjd')
-    t_queryend = Time(datetime.now(),scale='utc').to_value('mjd')
+    t_queryend = Time.now().mjd
+    t_querystart = t_queryend - days_ago
 
     task_url = None
     while not task_url:
