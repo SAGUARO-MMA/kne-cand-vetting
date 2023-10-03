@@ -331,11 +331,11 @@ def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
     if len(query.all()) > 0:
         m+=1
         for _x in Sdss12PhotoZQ3cRecord.serialize_list(query.all()):
-            if _x['rmag']== _x['rmag']:
-                if _x['zsp']==_x['zsp']:
+            if np.isfinite(_x['rmag']) and _x['rmag'] != -9999.:
+                if np.isfinite(_x['zsp']) and _x['zsp'] != -9999.:
                     z.append(_x['zsp'])
-                    z_err.append(0.) # no error for redshift
-                elif _x['zph']==_x['zph']:
+                    z_err.append(0.)  # no error for spectroscopic redshift
+                elif np.isfinite(_x['zph']) and _x['zph'] != -9999.:
                     z.append(_x['zph'])
                     z_err.append(_x['e_zph'])
                 else:
