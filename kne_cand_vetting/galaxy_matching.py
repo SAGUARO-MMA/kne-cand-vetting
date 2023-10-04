@@ -37,7 +37,7 @@ DB_USER = os.getenv('POSTGRES_USER', 'sassy')
 DB_CONNECT = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Chose radius to be equal to a 100 kpc offset at ~100 Mpc
-RADIUS_ARCMIN = 3.183
+RADIUS_ARCMIN = 3.437745624870037
 PCC_THRESHOLD = 0.80
 
 def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_thresh: float = PCC_THRESHOLD,
