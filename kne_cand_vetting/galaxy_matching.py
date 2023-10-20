@@ -12,6 +12,8 @@ from sassy_q3c_models.hecate_q3c_orm import HecateQ3cRecord
 from sassy_q3c_models.hecate_q3c_orm_filters import hecate_q3c_orm_filters
 from sassy_q3c_models.sdss12photoz_q3c_orm import Sdss12PhotoZQ3cRecord
 from sassy_q3c_models.sdss12photoz_q3c_orm_filters import sdss12photoz_q3c_orm_filters
+from sassy_q3c_models.ps1_q3c_orm import Ps1Q3cRecord
+from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -80,7 +82,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
 
     # loop through RA, Dec here
     _begin = time.time()
-    glade=0; gwgc=0; hecate=0; sdss=0
+    glade=0; gwgc=0; hecate=0; sdss=0; ps1=0
 
     # Find matches in GLADE:
     GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name = query_GLADE(session, RA, Dec, _radius)
@@ -99,19 +101,23 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source, SDSS_name = query_sdss12phot(session, RA, Dec, _radius)
     if SDSS_matches>0:
         sdss+=1
+        
+    PS1_matches, PS1_ra, PS1_dec, PS1_offset, PS1_mag, PS1_filt, PS1_z, PS1_zerr, PS1_source, PS1_name = query_ps1(session, RA, Dec, _radius)
+    if PS1_matches>0:
+        ps1+=1
 
     # sum the findings, turn into numpy arrays
-    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name)
-    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset)
-    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag)
-    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra)
-    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec)
-    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt)
-    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, np.tile(np.nan, len(SDSS_name))])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, np.tile(np.nan, len(SDSS_name))])
-    tot_z = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_z])
-    tot_zerr = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_zerr])
-    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source)
+    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name + PS1_name)
+    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset +PS1_offset)
+    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag + PS1_mag)
+    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra + PS1_ra)
+    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec + PS1_dec)
+    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt + PS1_filt)
+    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, np.tile(np.nan, len(SDSS_name)),  np.tile(np.nan, len(PS1_name))])
+    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, np.tile(np.nan, len(SDSS_name)), np.tile(np.nan, len(PS1_name))])
+    tot_z = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_z, PS1_z])
+    tot_zerr = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_zerr, PS1_zerr])
+    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source + PS1_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
 
@@ -352,6 +358,40 @@ def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
 
+def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
+
+    # Query the PS1 STRM Photo-z Catalog
+
+    gal_offset = []; mag = []; filt = []; z = []; z_err = []; gal_ra = [];
+    gal_dec = []; source = []; name = []; m=0
+
+    try:
+        query = session.query(Ps1Q3cRecord)
+        query = ps1_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+    except Exception as _e3:
+        if _verbose:
+            print(f"{_e3}")
+        print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
+
+    if len(query.all()) > 0:
+        m+=1
+        for _x in Ps1Q3cRecord.serialize_list(query.all()):
+
+            #### DO NOT HAVE MAGNITUDE YET
+            if _x['rmeanpsfmag'] != -999. and _x['ps_score']<0.83:
+                z.append(_x['z_phot'])
+                z_err.append(_x['z_err'])
+                mag.append(_x['rmeanpsfmag'])
+                filt.append('r')
+                gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['dec'])
+                source.append('PS1_STRM')
+                name.append(_x['psps_objid'])
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
 
 if __name__ == '__main__':
 
