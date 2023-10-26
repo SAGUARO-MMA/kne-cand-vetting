@@ -246,7 +246,8 @@ def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
         # set up query
         try:
             query = session.query(Ps1Q3cRecord)
-            query = ps1_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}'})
+            query = ps1_q3c_orm_filters(query, {'cone': f'{_e[0]},{_e[1]},{_radius}',
+                                                'ps_score__gte': 0.83})
         except Exception as _e3:
             if _verbose:
                 print(f"{_e3}")
@@ -254,36 +255,25 @@ def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
             continue
 
         # execute the query
-        if len(query.all()) == 0:
+        if query.count() == 0:
             star.append('None')
             starprob.append(0.0)
             staroffset.append(-99.0)
 
-        elif len(query.all())>1:
+        elif query.count() > 1:
             star.append('Multiple matches')
             starprob.append(0.0)
             staroffset.append(-99.0)
 
-        else:
-            match+=1
-            for _x in Ps1Q3cRecord.serialize_list(query.all()):
-                print(f'>>> PS1 source MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
-
-                if _x['ps_score']>0.83:
-
-                    star.append(_x['pid'])
-                    starprob.append(_x['ps_score'])
-                    ps1 = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
-                    cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
-                    staroffset.append(cand.separation(ps1).arcsec)
-
-                else:
-                    star.append('Galaxy match')
-                    starprob.append(_x['ps_score'])
-                    ps1 = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
-                    cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
-                    staroffset.append(cand.separation(ps1).arcsec)
-                
+        else:  # exactly one match
+            match += 1
+            print(f'>>> PS1 source MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
+            _x = query.one().serialized()
+            star.append(_x['pid'])
+            starprob.append(_x['ps_score'])
+            ps1 = SkyCoord(_x['ra'] * u.deg, _x['dec'] * u.deg)
+            cand = SkyCoord(_e[0] * u.deg, _e[1] * u.deg)
+            staroffset.append(cand.separation(ps1).arcsec)
 
     _end = time.time()
 

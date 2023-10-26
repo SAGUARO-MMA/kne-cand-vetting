@@ -367,7 +367,7 @@ def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
 
     try:
         query = session.query(Ps1Q3cRecord)
-        query = ps1_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+        query = ps1_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}', 'ps_score__lte': 0.83})
     except Exception as _e3:
         if _verbose:
             print(f"{_e3}")
@@ -378,7 +378,7 @@ def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
         for _x in Ps1Q3cRecord.serialize_list(query.all()):
 
             #### DO NOT HAVE MAGNITUDE YET
-            if _x['rmeanpsfmag'] != -999. and _x['ps_score']<0.83:
+            if _x['rmeanpsfmag'] != -999.:
                 z.append(_x['z_phot'])
                 z_err.append(_x['z_err'])
                 mag.append(_x['rmeanpsfmag'])
