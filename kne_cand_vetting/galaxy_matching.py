@@ -18,8 +18,10 @@ from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
 from typing import Optional
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+from astropy import constants as const
 from astropy.cosmology import FlatLambdaCDM
 cosmo = FlatLambdaCDM(H0=69.6 * u.km / u.s / u.Mpc, Tcmb0=2.725 * u.K, Om0=0.3)
+c_over_H0 = (const.c / cosmo.H0).to_value(u.Mpc)
 
 import argparse
 import os
@@ -85,24 +87,36 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     glade=0; gwgc=0; hecate=0; sdss=0; ps1=0
 
     # Find matches in GLADE:
-    GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name = query_GLADE(session, RA, Dec, _radius)
+    GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name, GLADE_z, GLADE_zerr = query_GLADE(session, RA, Dec, _radius)
     if GLADE_matches>0:
         glade+=1
 
     # Find matches in GWGC:
     GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name = query_GWGC(session, RA, Dec, _radius)
+    # convert luminosity distance to redshift
+    GWGC_z = np.array(GWGC_dist) / c_over_H0
+    GWGC_zerr = np.array(GWGC_dist_err) / c_over_H0
     if GWGC_matches>0:
         gwgc+=1
 
-    HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name = query_hecate(session, RA, Dec, _radius)
+    HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name, HECATE_v, HECATE_verr = query_hecate(session, RA, Dec, _radius)
+    # convert recession velocity to redshift
+    HECATE_z = np.array(HECATE_v) / const.c.to_value(u.km / u.s)
+    HECATE_zerr = np.array(HECATE_verr) / const.c.to_value(u.km / u.s)
     if HECATE_matches>0:
         hecate+=1
 
     SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source, SDSS_name = query_sdss12phot(session, RA, Dec, _radius)
+    # convert redshift to distance
+    SDSS_dist = np.array(SDSS_z) * c_over_H0
+    SDSS_dist_err = np.array(SDSS_zerr) * c_over_H0
     if SDSS_matches>0:
         sdss+=1
         
     PS1_matches, PS1_ra, PS1_dec, PS1_offset, PS1_mag, PS1_filt, PS1_z, PS1_zerr, PS1_source, PS1_name = query_ps1(session, RA, Dec, _radius)
+    # convert redshift to distance
+    PS1_dist = np.array(PS1_z) * c_over_H0
+    PS1_dist_err = np.array(PS1_zerr) * c_over_H0
     if PS1_matches>0:
         ps1+=1
 
@@ -113,10 +127,10 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra + PS1_ra)
     tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec + PS1_dec)
     tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt + PS1_filt)
-    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, np.tile(np.nan, len(SDSS_name)),  np.tile(np.nan, len(PS1_name))])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, np.tile(np.nan, len(SDSS_name)), np.tile(np.nan, len(PS1_name))])
-    tot_z = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_z, PS1_z])
-    tot_zerr = np.concatenate([np.tile(np.nan, len(GLADE_name) + len(GWGC_name) + len(HECATE_name)), SDSS_zerr, PS1_zerr])
+    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, SDSS_dist, PS1_dist])
+    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, SDSS_dist_err, PS1_dist_err])
+    tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, SDSS_z, PS1_z])
+    tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, SDSS_zerr, PS1_zerr])
     tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source + PS1_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
@@ -204,6 +218,8 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
     m=0
     # what if no B-mag?
     gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []; name = []
+    z = []
+    z_err = []
 
     # set up query
     try:
@@ -230,6 +246,8 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
                 distflag.append(_x['dist_flag'])
                 source.append('GLADE')
                 name.append(sort_names('GLADE',_x))
+                z.append(_x['z_helio'])
+                z_err.append(_x['z_err'])
             elif _x['b_j']== _x['b_j']:
                 mag.append(_x['b_j'])
                 filt.append('B_j')
@@ -245,8 +263,10 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
                 best_id, best_id_source = sort_names('GLADE',_x)
                 name.append(best_id)
                 name.append(sort_names('GLADE',_x))
+                z.append(_x['z_helio'])
+                z_err.append(_x['z_err'])
 
-    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, distflag, source, name
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, distflag, source, name, z, z_err
 
 def query_GWGC(session, ra, dec, _radius, _verbose: bool = True):
 
@@ -289,6 +309,8 @@ def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
     m=0
     gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []
     name = []
+    v = []
+    v_err = []
 
     # set up query
     try:
@@ -314,8 +336,10 @@ def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
                 dist_err.append(_x['e_d']) # Mpc
                 source.append('HECATE')
                 name.append(sort_names('HECATE',_x))
+                v.append(_x['v'])
+                v_err.append(_x['e_v'])
 
-    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name, v, v_err
 
 def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
 
@@ -379,8 +403,11 @@ def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
 
             #### DO NOT HAVE MAGNITUDE YET
             if _x['rmeanpsfmag'] is not None and _x['rmeanpsfmag'] != -999.:
-                z.append(_x['z_phot'])
-                z_err.append(_x['z_err'])
+                if np.isfinite(_x['z_phot']) and _x['z_phot'] != -999.:
+                    z.append(_x['z_phot'])
+                    z_err.append(_x['z_err'])
+                else:
+                    continue
                 mag.append(_x['rmeanpsfmag'])
                 filt.append('r')
                 gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
