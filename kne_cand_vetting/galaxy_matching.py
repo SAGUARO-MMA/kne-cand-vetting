@@ -21,6 +21,7 @@ from astropy import units as u
 from astropy import constants as const
 from astropy.cosmology import FlatLambdaCDM
 cosmo = FlatLambdaCDM(H0=69.6 * u.km / u.s / u.Mpc, Tcmb0=2.725 * u.K, Om0=0.3)
+c_over_H0 = (const.c / cosmo.H0).to_value(u.Mpc)
 
 import argparse
 import os
@@ -93,8 +94,8 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     # Find matches in GWGC:
     GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name = query_GWGC(session, RA, Dec, _radius)
     # convert luminosity distance to redshift
-    GWGC_z = np.array(GWGC_dist) * (cosmo.H0 / const.c).to_value(1. / u.Mpc)
-    GWGC_zerr = np.array(GWGC_dist_err) * (cosmo.H0 / const.c).to_value(1. / u.Mpc)
+    GWGC_z = np.array(GWGC_dist) / c_over_H0
+    GWGC_zerr = np.array(GWGC_dist_err) / c_over_H0
     if GWGC_matches>0:
         gwgc+=1
 
@@ -106,10 +107,16 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         hecate+=1
 
     SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source, SDSS_name = query_sdss12phot(session, RA, Dec, _radius)
+    # convert redshift to distance
+    SDSS_dist = np.array(SDSS_z) * c_over_H0
+    SDSS_dist_err = np.array(SDSS_zerr) * c_over_H0
     if SDSS_matches>0:
         sdss+=1
         
     PS1_matches, PS1_ra, PS1_dec, PS1_offset, PS1_mag, PS1_filt, PS1_z, PS1_zerr, PS1_source, PS1_name = query_ps1(session, RA, Dec, _radius)
+    # convert redshift to distance
+    PS1_dist = np.array(PS1_z) * c_over_H0
+    PS1_dist_err = np.array(PS1_zerr) * c_over_H0
     if PS1_matches>0:
         ps1+=1
 
@@ -120,8 +127,8 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra + PS1_ra)
     tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec + PS1_dec)
     tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt + PS1_filt)
-    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, np.tile(np.nan, len(SDSS_name)),  np.tile(np.nan, len(PS1_name))])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, np.tile(np.nan, len(SDSS_name)), np.tile(np.nan, len(PS1_name))])
+    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, SDSS_dist, PS1_dist])
+    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, SDSS_dist_err, PS1_dist_err])
     tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, SDSS_z, PS1_z])
     tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, SDSS_zerr, PS1_zerr])
     tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source + PS1_source)
