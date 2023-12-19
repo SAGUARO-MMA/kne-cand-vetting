@@ -403,8 +403,11 @@ def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
 
             #### DO NOT HAVE MAGNITUDE YET
             if _x['rmeanpsfmag'] is not None and _x['rmeanpsfmag'] != -999.:
-                z.append(_x['z_phot'])
-                z_err.append(_x['z_err'])
+                if np.isfinite(_x['z_phot']) and _x['z_phot'] != -999.:
+                    z.append(_x['z_phot'])
+                    z_err.append(_x['z_err'])
+                else:
+                    continue
                 mag.append(_x['rmeanpsfmag'])
                 filt.append('r')
                 gal = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
