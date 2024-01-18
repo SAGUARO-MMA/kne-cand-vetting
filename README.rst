@@ -35,6 +35,14 @@ Galaxy cross-matching:
 
 * GWGC catalog
 
+Fetches photometry from:
+
+* TNS
+
+* ZTF (public)
+
+* ATLAS (forced photometry)
+
 * GLADE catalog 
 
 * HECATE catalog
