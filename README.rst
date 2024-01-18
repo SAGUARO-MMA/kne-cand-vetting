@@ -17,4 +17,15 @@ Package for assessing viability of candidate counterparts to GW events.
 Features
 --------
 
-* Milliquas matching
+Point source cross-matching with:
+* Milliquas catalog
+* ASAS-SN variable star catalog
+* Gaia DR3 
+* Panstarrs point source catalog
+
+Galaxy cross-matching:
+* PS1 STRM photo-z catalog
+* SDSS DR12 photo-z catalog
+* GWGC catalog
+* GLADE catalog 
+* HECATE catalog
