@@ -35,6 +35,10 @@ Galaxy cross-matching:
 
 * GWGC catalog
 
+* GLADE catalog 
+
+* HECATE catalog
+
 Fetches photometry from:
 
 * TNS
@@ -42,7 +46,3 @@ Fetches photometry from:
 * ZTF (public)
 
 * ATLAS (forced photometry)
-
-* GLADE catalog 
-
-* HECATE catalog
