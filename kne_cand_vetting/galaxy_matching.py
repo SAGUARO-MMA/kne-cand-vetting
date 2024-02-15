@@ -121,8 +121,8 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         ps1+=1
 
     # sum the findings, turn into numpy arrays
-    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name + PS1_name)
-    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset +PS1_offset)
+    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name + PS1_name, dtype=str)
+    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset + PS1_offset)
     tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag + PS1_mag)
     tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra + PS1_ra)
     tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec + PS1_dec)
