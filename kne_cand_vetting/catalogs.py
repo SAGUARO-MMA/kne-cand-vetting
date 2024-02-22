@@ -219,7 +219,7 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
             for _x in GaiaDR3VariableQ3cRecord.serialize_list(query.all()):
                 print(f'>>> Gaia Star MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
 
-                star.append(_x['sid'])
+                star.append(_x['source_id'])
                 starprob.append(1.0)
                 starclass.append(_x['classification'])
 
