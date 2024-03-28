@@ -14,6 +14,8 @@ from sassy_q3c_models.sdss12photoz_q3c_orm import Sdss12PhotoZQ3cRecord
 from sassy_q3c_models.sdss12photoz_q3c_orm_filters import sdss12photoz_q3c_orm_filters
 from sassy_q3c_models.ps1_q3c_orm import Ps1Q3cRecord
 from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
+from sassy_q3c_models.desi_spec_q3c_orm import DesiSpecQ3cRecord
+from sassy_q3c_models.desi_spec_q3c_orm_filters import desi_spec_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -84,7 +86,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
 
     # loop through RA, Dec here
     _begin = time.time()
-    glade=0; gwgc=0; hecate=0; sdss=0; ps1=0
+    glade=0; gwgc=0; hecate=0; sdss=0; ps1=0; desi=0
 
     # Find matches in GLADE:
     GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name, GLADE_z, GLADE_zerr = query_GLADE(session, RA, Dec, _radius)
@@ -106,6 +108,13 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if HECATE_matches>0:
         hecate+=1
 
+    DESI_matches, DESI_ra, DESI_dec, DESI_offset, DESI_mag, DESI_filt, DESI_z, DESI_zerr, DESI_source, DESI_name = query_desi_spec(session, RA, Dec, _radius)
+    # convert redshift to distance
+    DESI_dist = np.array(DESI_z) * c_over_H0
+    DESI_dist_err = np.array(DESI_zerr) * c_over_H0
+    if DESI_matches>0:
+        desi+=1
+
     SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source, SDSS_name = query_sdss12phot(session, RA, Dec, _radius)
     # convert redshift to distance
     SDSS_dist = np.array(SDSS_z) * c_over_H0
@@ -121,17 +130,17 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         ps1+=1
 
     # sum the findings, turn into numpy arrays
-    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + SDSS_name + PS1_name, dtype=str)
-    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + SDSS_offset + PS1_offset)
-    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + SDSS_mag + PS1_mag)
-    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + SDSS_ra + PS1_ra)
-    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + SDSS_dec + PS1_dec)
-    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + SDSS_filt + PS1_filt)
-    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, SDSS_dist, PS1_dist])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, SDSS_dist_err, PS1_dist_err])
-    tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, SDSS_z, PS1_z])
-    tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, SDSS_zerr, PS1_zerr])
-    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + SDSS_source + PS1_source)
+    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + DESI_name + SDSS_name + PS1_name, dtype=str)
+    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + DESI_offset + SDSS_offset + PS1_offset)
+    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + DESI_mag + SDSS_mag + PS1_mag)
+    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + DESI_ra + SDSS_ra + PS1_ra)
+    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + DESI_dec + SDSS_dec + PS1_dec)
+    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + DESI_filt + SDSS_filt + PS1_filt)
+    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, DESI_dist, SDSS_dist, PS1_dist])
+    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, DESI_dist_err, SDSS_dist_err, PS1_dist_err])
+    tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, DESI_z, SDSS_z, PS1_z])
+    tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, DESI_zerr, SDSS_zerr, PS1_zerr])
+    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + DESI_source + SDSS_source + PS1_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
 
@@ -340,6 +349,42 @@ def query_hecate(session, ra, dec, _radius, _verbose: bool = True):
                 v_err.append(_x['e_v'])
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, dist, dist_err, source, name, v, v_err
+
+def query_desi_spec(session, ra, dec, _radius, _verbose: bool = True):
+
+    # Query the DESI spectroscopic catalog
+    m=0
+    gal_offset = []; mag = []; filt = []; z = []; z_err = []; gal_ra = [];
+    gal_dec = []; source = []; name = []
+
+    # set up query
+    try:
+        query = session.query(DesiSpecQ3cRecord)
+        query = desi_spec_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+    except Exception as _e3:
+        if _verbose:
+            print(f"{_e3}")
+        print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
+
+    if len(query.all()) > 0:
+        m+=1
+        for _x in DesiSpecQ3cRecord.serialize_list(query.all()):
+            if np.isfinite(_x['z']):
+                z.append(_x['z'])
+                z_err.append(_x['zerr'])
+                mag = - 2.5 * np.log10(_x['flux_r']*10**-9) # convert nmy to Jy
+                mag.append(_x['flux_r'])
+                filt.append('r')
+                gal = SkyCoord(_x['target_ra']*u.deg, _x['target_dec']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['target_ra'])
+                gal_dec.append(_x['target_dec'])
+                source.append('DESI')
+                name.append(_x['targetid'])
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
+
 
 def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
 
