@@ -157,7 +157,7 @@ def ATLAS_forcedphot(RA: float, Dec: float, days_ago: float = 200., _verbose: bo
 
 def ATLAS_stack(filecontent, log=logger):
 
-    epochs = ATLAS_read_and_sigma_clip_data(filecontent, log=logger)
+    epochs = ATLAS_read_and_sigma_clip_data(filecontent, log=log)
 
     # c = cyan, o = arange
     magnitudes = {
