@@ -372,8 +372,8 @@ def query_desi_spec(session, ra, dec, _radius, _verbose: bool = True):
             if np.isfinite(_x['z']):
                 z.append(_x['z'])
                 z_err.append(_x['zerr'])
-                mag = - 2.5 * np.log10(_x['flux_r']*10**-9) # convert nmy to Jy
-                mag.append(_x['flux_r'])
+                mag_r = - 2.5 * np.log10(_x['flux_r']*10**-9) # convert nmy to Jy
+                mag.append(mag_r)
                 filt.append('r')
                 gal = SkyCoord(_x['target_ra']*u.deg, _x['target_dec']*u.deg)
                 cand = SkyCoord(ra*u.deg, dec*u.deg)
