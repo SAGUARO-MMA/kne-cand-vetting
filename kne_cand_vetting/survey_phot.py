@@ -21,7 +21,6 @@ import re
 
 from fundamentals.stats import rolling_window_sigma_clip
 from operator import itemgetter
-from past.utils import old_div
 
 from sassy_q3c_models.ztf_q3c_orm import ZtfQ3cRecord
 from sassy_q3c_models.ztf_q3c_orm_filters import ztf_q3c_orm_filters
@@ -295,19 +294,16 @@ def stack_photometry(magnitudes, binningDays=1.):
         # NIGHTS) ...
         for k, v in list(distinctMjds.items()):
             # GIVE ME THE MEAN MJD
-            meanMjd = old_div(sum(v["mjds"]), len(v["mjds"]))
+            meanMjd = np.mean(v["mjds"])
             summedMagnitudes[fil]["mjds"].append(meanMjd)
             # GIVE ME THE MEAN FLUX
-            meanFLux = old_div(sum(v["mags"]), len(v["mags"]))
+            meanFLux = np.mean(v["mags"])
             summedMagnitudes[fil]["mags"].append(meanFLux)
-            # GIVE ME THE COMBINED ERROR
-            combError = sum(v["magErrs"]) / len(v["magErrs"]
-                                                ) / np.sqrt(len(v["magErrs"]))
+            # GIVE ME THE COMBINED ERROR (note: original source calculates the error differently)
+            combError = np.sum(np.array(v["magErrs"]) ** 2.) ** 0.5 / len(v["magErrs"])
             summedMagnitudes[fil]["magErrs"].append(combError)
             # 5-sigma limits
-            # combine duJy errors in quadrature, convert to cgs
-            combFnuErr = np.sqrt(sum(mag**2 for mag in v["magErrs"])) * 1e-29
-            comb5SigLimit = -2.5*np.log10(5*combFnuErr) - 48.6
+            comb5SigLimit = 23.9 - 2.5 * np.log10(5. * combError)
             summedMagnitudes[fil]["lim5sig"].append(comb5SigLimit)
             # GIVE ME NUMBER OF DATA POINTS COMBINED
             n = len(v["mjds"])
@@ -321,9 +317,6 @@ def stack_photometry(magnitudes, binningDays=1.):
                 'mag5sig': comb5SigLimit
             })
     print('completed the ``stack_photometry`` method')
-
-    if not len(allData):
-        return allData
 
     return allData
 
