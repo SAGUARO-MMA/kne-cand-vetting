@@ -184,7 +184,7 @@ def tns_query(session, ra, dec, radius):
     query = tns_q3c_orm_filters(query, {'cone': f'{ra},{dec},{radius}'})
     tns_match = query.first()
     if tns_match is not None:
-        return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype
+        return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype, tns_match.internal_names
 
 def gaia_query(session, coords, names, _radius, _verbose: bool = False):
     '''
