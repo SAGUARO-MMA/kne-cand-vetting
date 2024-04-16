@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from astropy.time import Time
 import os
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import sys
 import time
 import logging
@@ -21,6 +21,7 @@ import re
 
 from fundamentals.stats import rolling_window_sigma_clip
 from operator import itemgetter
+import math
 
 from sassy_q3c_models.ztf_q3c_orm import ZtfQ3cRecord
 from sassy_q3c_models.ztf_q3c_orm_filters import ztf_q3c_orm_filters
@@ -155,7 +156,10 @@ def ATLAS_forcedphot(RA: float, Dec: float, days_ago: float = 200., _verbose: bo
     return ATLASphot
 
 def ATLAS_stack(filecontent, log=logger):
-
+    """
+    Function adapted from David Young's :func:`plotter.plot_single_result`
+    https://github.com/thespacedoctor/plot-results-from-atlas-force-photometry-service/blob/main/plot_atlas_fp.py
+    """
     epochs = ATLAS_read_and_sigma_clip_data(filecontent, log=log)
 
     # c = cyan, o = arange
@@ -180,7 +184,8 @@ def ATLAS_stack(filecontent, log=logger):
 
 def ATLAS_read_and_sigma_clip_data(filecontent, log, clippingSigma=2.2):
     """
-    Function modified from David Young
+    Function adapted from David Young's :func:`plotter.read_and_sigma_clip_data`
+    https://github.com/thespacedoctor/plot-results-from-atlas-force-photometry-service/blob/main/plot_atlas_fp.py
 
     *clean up rouge data from the files by performing some basic clipping*
     **Key Arguments:**
@@ -250,7 +255,11 @@ def ATLAS_read_and_sigma_clip_data(filecontent, log, clippingSigma=2.2):
     return cepochs + oepochs
 
 def stack_photometry(magnitudes, binningDays=1.):
-    """*stack the photometry for the given temporal range*
+    """
+    Function adapted from David Young's :func:`plotter.stack_photometry`
+    https://github.com/thespacedoctor/plot-results-from-atlas-force-photometry-service/blob/main/plot_atlas_fp.py
+
+    *stack the photometry for the given temporal range*
     **Key Arguments:**
         - `magnitudes` -- dictionary of photometry divided into filter sets
         - `binningDays` -- the binning to use (in days)
@@ -274,7 +283,7 @@ def stack_photometry(magnitudes, binningDays=1.):
         distinctMjds = {}
         for mjd, flx, err, lim in zip(data["mjds"], data["mags"], data["magErrs"], data["lim5sig"]):
             # DICT KEY IS THE UNIQUE INTEGER MJD
-            key = str(int(np.floor(mjd / float(binningDays))))
+            key = str(int(math.floor(mjd / float(binningDays))))
             # FIRST DATA POINT OF THE NIGHTS? CREATE NEW DATA SET
             if key not in distinctMjds:
                 distinctMjds[key] = {
@@ -294,16 +303,17 @@ def stack_photometry(magnitudes, binningDays=1.):
         # NIGHTS) ...
         for k, v in list(distinctMjds.items()):
             # GIVE ME THE MEAN MJD
-            meanMjd = np.mean(v["mjds"])
+            meanMjd = sum(v["mjds"]) / len(v["mjds"])
             summedMagnitudes[fil]["mjds"].append(meanMjd)
             # GIVE ME THE MEAN FLUX
-            meanFLux = np.mean(v["mags"])
+            meanFLux = sum(v["mags"]) / len(v["mags"])
             summedMagnitudes[fil]["mags"].append(meanFLux)
-            # GIVE ME THE COMBINED ERROR (note: original source calculates the error differently)
-            combError = np.sum(np.array(v["magErrs"]) ** 2.) ** 0.5 / len(v["magErrs"])
+            # GIVE ME THE COMBINED ERROR
+            sum_of_squares = sum(x ** 2 for x in v["magErrs"])
+            combError = math.sqrt(sum_of_squares) / len(v["magErrs"])
             summedMagnitudes[fil]["magErrs"].append(combError)
             # 5-sigma limits
-            comb5SigLimit = 23.9 - 2.5 * np.log10(5. * combError)
+            comb5SigLimit = 23.9 - 2.5 * math.log10(5. * combError)
             summedMagnitudes[fil]["lim5sig"].append(comb5SigLimit)
             # GIVE ME NUMBER OF DATA POINTS COMBINED
             n = len(v["mjds"])
