@@ -369,7 +369,7 @@ def query_desi_spec(session, ra, dec, _radius, _verbose: bool = True):
     if len(query.all()) > 0:
         m+=1
         for _x in DesiSpecQ3cRecord.serialize_list(query.all()):
-            if _x['z']>0 and (_x['flux_r']>0 or _x['gaia_phot_g_mean_mag']>0):
+            if _x['z']>0:
                 if _x['flux_r']>0:
                     mag_r = - 2.5 * np.log10(_x['flux_r']*10**-9) # convert nmy to Jy
                     mag.append(mag_r)
@@ -377,6 +377,8 @@ def query_desi_spec(session, ra, dec, _radius, _verbose: bool = True):
                 elif _x['gaia_phot_g_mean_mag']>0:
                     mag.append(_x['gaia_phot_g_mean_mag'])
                     filt.append('G')
+                else:
+                    continue
                 z.append(_x['z'])
                 z_err.append(_x['zerr'])
                 gal = SkyCoord(_x['target_ra']*u.deg, _x['target_dec']*u.deg)
