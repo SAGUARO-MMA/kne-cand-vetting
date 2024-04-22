@@ -72,11 +72,11 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
     _names = 'default'
 
     # Pass to milliquas_query
-    qprob, qso, qoffset = milliquas_query(session, _coords, _names, _radius)
+    qso, qoffset = milliquas_query(session, _coords, _names, _radius)
 
-    asassnprob, asassn, asassnoffset = asassn_query(session, _coords, _names, _radius)
+    asassn, asassnoffset = asassn_query(session, _coords, _names, _radius)
 
-    gaiaprob, gaias, gaiaoffset, gaiaclass = gaia_query(session, _coords, _names, _radius)
+    gaia, gaiaoffset, gaiaclass = gaia_query(session, _coords, _names, _radius)
 
     ps1prob, ps1, ps1offset = ps1_ps_query(session, _coords, _names, _radius)
 
@@ -84,7 +84,7 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     session.close()
 
-    return qprob, qso, qoffset, asassnprob, asassn, asassnoffset, tns_results, gaiaprob, gaias, gaiaoffset, gaiaclass, ps1prob, ps1, ps1offset
+    return qso, qoffset, asassn, asassnoffset, tns_results, gaia, gaiaoffset, gaiaclass, ps1prob, ps1, ps1offset
 
 def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     """ Query the Million Quasar Catalog (Flesch 2021) for matches to kilonova candidates """
@@ -92,7 +92,7 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     # set variable(s)
     _begin = time.time()
 
-    qso = []; qoffset = []; qprob = []
+    qso = []; qoffset = []
     match=0
 
     # for all (RA, Dec) tuples, execute cone search and log candidates with qpct > 97(%)
@@ -111,7 +111,6 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
         # execute the query
         if len(query.all()) == 0:
             qso.append('None')
-            qprob.append(0.0)
             qoffset.append(-99.0)
         else:
             match+=1
@@ -120,7 +119,6 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
 
                 # add the query dictionary to the qso list and modify the qprob list
                 qso.append(_x['name']) #{**_x, **{'Candidate': names[_i], 'Probability': 1.0, 'Candidate_RA': _e[0], 'Candidate_Dec': _e[1]}})
-                qprob.append(1.0)
 
                 QSO = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
                 cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
@@ -135,14 +133,14 @@ def milliquas_query(session, coords, names, _radius, _verbose: bool = True):
     print(f"Completed Milliquas search in {_end-_begin:.3f} sec")
     print(f"Found {match} QSOs in {len(coords)} candidates")
 
-    return qprob, qso, qoffset
+    return qso, qoffset
 
 def asassn_query(session, coords, names, _radius, _verbose: bool = False):
     """ Query the ASAS-SN variable star catalog (Flesch 2021) for matches to kilonova candidates """
 
     _begin = time.time()
 
-    starprob = []; star = []; staroffset = []
+    star = []; staroffset = []
     match=0
 
     for _i, _e in enumerate(coords):
@@ -159,7 +157,6 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
         # execute the query
         if len(query.all()) == 0:
             star.append('None')
-            starprob.append(0.0)
             staroffset.append(-99.0)
         else:
             match+=1
@@ -168,7 +165,6 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
 
                 # add the query dictionary to the qso list and modify the qprob list
                 star.append(_x['asassn_name']) #{**_x, **{'Candidate': names[_i], 'Probability': 1.0, 'Candidate_RA': _e[0], 'Candidate_Dec': _e[1]}})
-                starprob.append(1.0)
 
                 asassn = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
                 cand = SkyCoord(_e[0]*u.deg, _e[1]*u.deg)
@@ -179,7 +175,7 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
     print(f"Completed ASAS-SN search in {_end-_begin:.3f} sec")
     print(f"Found {match} variable stars in {len(coords)} candidates")
 
-    return starprob, star, staroffset
+    return star, staroffset
 
 
 def tns_query(session, ra, dec, radius):
@@ -188,13 +184,13 @@ def tns_query(session, ra, dec, radius):
     query = tns_q3c_orm_filters(query, {'cone': f'{ra},{dec},{radius}'})
     tns_match = query.first()
     if tns_match is not None:
-        return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype
+        return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype, tns_match.internal_names
 
 def gaia_query(session, coords, names, _radius, _verbose: bool = False):
     '''
     Query Gaia DR3 for a variable star match
     '''
-    starprob = []; star = []; staroffset = []; starclass = []
+    star = []; staroffset = []; starclass = []
     match=0
 
     for _i, _e in enumerate(coords):
@@ -211,7 +207,6 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
         # execute the query
         if len(query.all()) == 0:
             star.append('None')
-            starprob.append(0.0)
             staroffset.append(-99.0)
             starclass.append('None')
         else:
@@ -220,7 +215,6 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
                 print(f'>>> Gaia Star MATCH at RA, Dec = ({_e[0]},{_e[1]}), index={_i}!')
 
                 star.append(_x['source_id'])
-                starprob.append(1.0)
                 starclass.append(_x['classification'])
 
                 gaia = SkyCoord(_x['ra']*u.deg, _x['dec']*u.deg)
@@ -231,7 +225,7 @@ def gaia_query(session, coords, names, _radius, _verbose: bool = False):
 
     print(f"Found {match} variable stars in {len(coords)} candidates")
 
-    return starprob, star, staroffset, starclass
+    return star, staroffset, starclass
 
 def ps1_ps_query(session, coords, names, _radius, _verbose: bool = False):
 
@@ -297,7 +291,7 @@ if __name__ == '__main__':
 
     # execute
     try:
-        asassnprob, asassn, asassnoffset, qprob, qso, qoffset, gaiaprob, gaias, gaiaoffset, gaiaclass = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
+        qso, qoffset, asassn, asassnoffset, tns_results, gaia, gaiaoffset, gaiaclass, ps1prob, ps1, ps1offset = static_cats_query(RA=_a.RA, Dec =_a.Dec, _radius=float(_a.radius), _verbose=bool(_a.verbose))
         # print(qprob, qso, qoffset)
     except Exception as _x:
         print(f"{_x}")
