@@ -16,6 +16,8 @@ from sassy_q3c_models.ps1_q3c_orm import Ps1Q3cRecord
 from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
 from sassy_q3c_models.desi_spec_q3c_orm import DesiSpecQ3cRecord
 from sassy_q3c_models.desi_spec_q3c_orm_filters import desi_spec_q3c_orm_filters
+from sassy_q3c_models.ls_dr10_photo_z_q3c_orm import LsDr10PhotoZQ3cRecord
+from sassy_q3c_models.ls_dr10_photo_z_q3c_filters import ls_dr10_photo_z_q3c_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -86,7 +88,7 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
 
     # loop through RA, Dec here
     _begin = time.time()
-    glade=0; gwgc=0; hecate=0; sdss=0; ps1=0; desi=0
+    glade=0; gwgc=0; hecate=0; sdss=0; ps1=0; desi=0; lsdr10=0
 
     # Find matches in GLADE:
     GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name, GLADE_z, GLADE_zerr = query_GLADE(session, RA, Dec, _radius)
@@ -129,18 +131,24 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if PS1_matches>0:
         ps1+=1
 
+    LSDR10_matches, LSDR10_ra, LSDR10_dec, LSDR10_offset, LSDR10_mag,LSDR10_filt, LSDR10_z, LSDR10_zerr, LSDR10_source, LSDR10_name = query_LS_DR10_photoz(session, RA, Dec, _radius)
+    LSDR10_dist = np.array(LSDR10_z) * c_over_H0
+    LSDR10_dist_err = np.array(LSDR10_zerr) * c_over_H0
+    if LSDR10_matches>0:
+        lsdr10+=1
+
     # sum the findings, turn into numpy arrays
-    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + DESI_name + SDSS_name + PS1_name, dtype=str)
-    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + DESI_offset + SDSS_offset + PS1_offset)
-    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + DESI_mag + SDSS_mag + PS1_mag)
-    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + DESI_ra + SDSS_ra + PS1_ra)
-    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + DESI_dec + SDSS_dec + PS1_dec)
-    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + DESI_filt + SDSS_filt + PS1_filt)
-    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, DESI_dist, SDSS_dist, PS1_dist])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, DESI_dist_err, SDSS_dist_err, PS1_dist_err])
-    tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, DESI_z, SDSS_z, PS1_z])
-    tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, DESI_zerr, SDSS_zerr, PS1_zerr])
-    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + DESI_source + SDSS_source + PS1_source)
+    tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + DESI_name + SDSS_name + PS1_name + LSDR10_name, dtype=str)
+    tot_offsets = np.array(GLADE_offset + GWGC_offset + HECATE_offset + DESI_offset + SDSS_offset + PS1_offset + LSDR10_offset)
+    tot_mags = np.array(GLADE_mag + GWGC_mag + HECATE_mag + DESI_mag + SDSS_mag + PS1_mag + LSDR10_mag)
+    tot_ra = np.array(GLADE_ra + GWGC_ra + HECATE_ra + DESI_ra + SDSS_ra + PS1_ra + LSDR10_ra)
+    tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + DESI_dec + SDSS_dec + PS1_dec + LSDR10_dec)
+    tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + DESI_filt + SDSS_filt + PS1_filt + LSDR10_filt)
+    tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, DESI_dist, SDSS_dist, PS1_dist, LSDR10_dist])
+    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, DESI_dist_err, SDSS_dist_err, PS1_dist_err, LSDR10_dist_err])
+    tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, DESI_z, SDSS_z, PS1_z, LSDR10_z])
+    tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, DESI_zerr, SDSS_zerr, PS1_zerr, LSDR10_zerr])
+    tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + DESI_source + SDSS_source + PS1_source + LSDR10_source)
 
     PCCS = pcc(tot_offsets,tot_mags)
 
@@ -159,6 +167,8 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
         print(f"Found a HECATE galaxy match.")
     if sdss==1:
         print(f"Found SDSS DR12 Photo-z Catalog galaxy match.")
+    if lsdr10==1:
+        print(f"Found Legacy Survey DR10 Photo-z Catalog galaxy match.")
 
     all_data = [{'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'Offset':tot_offsets[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'z':tot_z[pcc_args][cond][i],'zErr':tot_zerr[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
 
@@ -182,6 +192,10 @@ def pcc(r,m):
     prob = 1-np.exp(-(np.pi*(r**2)*sigma))
 
     return prob
+
+def nanomgy_to_mag(nmgy):
+    mag = 22.5 - 2.5 * np.log10(nmgy)
+    return mag
 
 def sort_names(catalog,_dict):
     """Chooses preferred name to display"""
@@ -213,6 +227,46 @@ def sort_names(catalog,_dict):
 
     return name
 
+def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
+    """
+    Query Legacy Survey DR 10 Photo-z Catalog
+    """
+    m=0
+    gal_offset = []; mag = []; filt = []; z = []; z_err = []; gal_ra = [];
+    gal_dec = []; source = []; name = []
+
+    try:
+        query = session.query(LsDr10PhotoZQ3cRecord)
+        query = ls_dr10_photo_z_q3c_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+    except Exception as _e3:
+        if _verbose:
+            print(f"{_e3}")
+        print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
+
+    if len(query.all()) > 0:
+        m+=1
+        for _x in LsDr10PhotoZQ3cRecord.serialize_list(query.all()):
+            if np.isfinite(_x['flux_r']) and _x('flux_r')!=-99:
+                if _x['z_spec'] != -99:
+                    z.append(_x['z_spec'])
+                    z_err.append(0.)  # no error for spectroscopic redshift
+                elif _x['zph'] != -99:
+                    z.append(_x['z_phot_mean'])
+                    z_err.append(((_x['z_phot_mean'] - _x['z_phot_l68']) + (_x('z_phot_u68') - _x['z_phot_mean'])) / 2)
+                else:
+                    continue
+                mag.append(nanomgy_to_mag(_x['flux_r']))
+                filt.append('r')
+                gal = SkyCoord(_x['ra']*u.deg, _x['declination']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['declination'])
+                source.append('LS_DR10')
+                name.append(_x['lid'])
+
+    return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
+
 def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
 
     """
@@ -225,7 +279,6 @@ def query_GLADE(session, ra, dec, _radius, _verbose: bool = True):
     3: it has a measured spectroscopic redshift from which we have calculated its luminosity distance
     """
     m=0
-    # what if no B-mag?
     gal_offset = []; mag = []; filt = []; dist = []; dist_err = []; gal_ra = []; gal_dec = []; distflag = []; source = []; name = []
     z = []
     z_err = []
@@ -408,7 +461,6 @@ def query_sdss12phot(session, ra, dec, _radius, _verbose: bool = True):
             print(f"{_e3}")
         print(f"Failed to execute query for RA, Dec = ({ra},{dec})")
 
-    # print(query.all())
     if len(query.all()) > 0:
         m+=1
         for _x in Sdss12PhotoZQ3cRecord.serialize_list(query.all()):
