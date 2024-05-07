@@ -80,7 +80,7 @@ def static_cats_query(RA: float, Dec: float, _radius: float = RADIUS_ARCSEC, _ve
 
     ps1prob, ps1, ps1offset = ps1_ps_query(session, _coords, _names, _radius)
 
-    tns_results = [tns_query(session, ra, dec, _radius) for ra, dec in _coords]
+    tns_results = tns_query(session, _coords, _radius)
 
     session.close()
 
@@ -178,13 +178,17 @@ def asassn_query(session, coords, names, _radius, _verbose: bool = False):
     return star, staroffset
 
 
-def tns_query(session, ra, dec, radius):
-    """Query the Transient Name Server for matches to a kilonova candidate"""
-    query = session.query(TnsQ3cRecord)
-    query = tns_q3c_orm_filters(query, {'cone': f'{ra},{dec},{radius}'})
-    tns_match = query.first()
-    if tns_match is not None:
-        return tns_match.name_prefix + tns_match.name, tns_match.redshift, tns_match.objtype, tns_match.internal_names
+def tns_query(session, coords, radius):
+    """Query the Transient Name Server for matches to kilonova candidate(s)"""
+    tns_matches = []
+    for ra, dec in coords:
+        query = session.query(TnsQ3cRecord)
+        query = tns_q3c_orm_filters(query, {'cone': f'{ra},{dec},{radius}'})
+        for tns_match in query:
+            tns_matches.append((tns_match.name_prefix + tns_match.name, tns_match.redshift,
+                                tns_match.objtype, tns_match.internal_names))
+    return tns_matches
+
 
 def gaia_query(session, coords, names, _radius, _verbose: bool = False):
     '''
