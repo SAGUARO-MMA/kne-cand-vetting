@@ -17,7 +17,7 @@ from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
 from sassy_q3c_models.desi_spec_q3c_orm import DesiSpecQ3cRecord
 from sassy_q3c_models.desi_spec_q3c_orm_filters import desi_spec_q3c_orm_filters
 from sassy_q3c_models.ls_dr10_photo_z_q3c_orm import LsDr10PhotoZQ3cRecord
-from sassy_q3c_models.ls_dr10_photo_z_q3c_filters import ls_dr10_photo_z_q3c_filters
+from sassy_q3c_models.ls_dr10_photo_z_q3c_orm_filters import ls_dr10_photo_z_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -237,7 +237,7 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
 
     try:
         query = session.query(LsDr10PhotoZQ3cRecord)
-        query = ls_dr10_photo_z_q3c_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+        query = ls_dr10_photo_z_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
     except Exception as _e3:
         if _verbose:
             print(f"{_e3}")
@@ -246,13 +246,13 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
     if len(query.all()) > 0:
         m+=1
         for _x in LsDr10PhotoZQ3cRecord.serialize_list(query.all()):
-            if np.isfinite(_x['flux_r']) and _x('flux_r')!=-99:
+            if np.isfinite(_x['flux_r']) and _x['flux_r'] != -99:
                 if _x['z_spec'] != -99:
                     z.append(_x['z_spec'])
                     z_err.append(0.)  # no error for spectroscopic redshift
-                elif _x['zph'] != -99:
+                elif _x['z_phot_mean'] != -99:
                     z.append(_x['z_phot_mean'])
-                    z_err.append(((_x['z_phot_mean'] - _x['z_phot_l68']) + (_x('z_phot_u68') - _x['z_phot_mean'])) / 2)
+                    z_err.append(((_x['z_phot_mean'] - _x['z_phot_l68']) + (_x['z_phot_u68'] - _x['z_phot_mean'])) / 2)
                 else:
                     continue
                 mag.append(nanomgy_to_mag(_x['flux_r']))
