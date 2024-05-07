@@ -252,7 +252,7 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
                     z_err.append(0.)  # no error for spectroscopic redshift
                 elif _x['z_phot_mean'] != -99:
                     z.append(_x['z_phot_mean'])
-                    z_err.append(((_x['z_phot_mean'] - _x['z_phot_l68']) + (_x['z_phot_u68'] - _x['z_phot_mean'])) / 2)
+                    z_err.append((_x['z_phot_u68'] - _x['z_phot_l68']) / 2)
                 else:
                     continue
                 mag.append(nanomgy_to_mag(_x['flux_r']))
