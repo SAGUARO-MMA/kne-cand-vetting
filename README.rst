@@ -12,37 +12,41 @@ Kilonova Candidate Vetting
 Package for assessing viability of candidate counterparts to GW events.
 
 * Free software: 3-clause BSD license
-* Documentation: (COMING SOON!) https://jrastinejad.github.io/kne-cand-vetting.
+* Documentation: (COMING SOON!)
 
 Features
 --------
 
 Point source cross-matching with:
 
-* Milliquas catalog
+* Milliquas catalog (Flesch 2015, 2021)
 
-* ASAS-SN variable star catalog
+* ASAS-SN variable star catalog (Jayasinghe et al. 2019)
 
-* Gaia DR3 
+* Gaia DR3 (Gaia Collaboration 2023; Rimoldini et al. 2023)
 
-* Panstarrs point source catalog
+* Panstarrs point source catalog (Tachibana and Miller 2018)
 
 Galaxy cross-matching:
 
-* PS1 STRM photo-z catalog
+* Legacy Survey DR10 photometric redshift catalog (Zhou et al. 2023)
 
-* SDSS DR12 photo-z catalog
+* DESI spectroscopic redshift catalog (DESI Collaboration et al. 2023)
 
-* GWGC catalog
+* PS1 STRM photometric redshift catalog (Beck et al. 2021)
 
-* GLADE catalog 
+* SDSS DR12 photometric redshift catalog (Alam et al. 2015)
 
-* HECATE catalog
+* GWGC catalog (White et al. 2011)
+
+* GLADE+ catalog (Dálya et al. 2022)
+
+* HECATE catalog (Kovlakas et al. 2021)
 
 Fetches photometry from:
 
-* TNS
+* TNS (Gal-Yam 2021)
 
-* ZTF (public)
+* ZTF (public; Bellm et al. 2019; Masci et al. 2019; Patterson et al. 2019)
 
-* ATLAS (forced photometry)
+* ATLAS (forced photometry; Tonry et al. 2018, Smith et al. 202, Shingles et al. 2021), stacks photometry from a single night
