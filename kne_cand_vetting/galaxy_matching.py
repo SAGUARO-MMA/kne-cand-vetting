@@ -94,48 +94,61 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     GLADE_matches, GLADE_ra, GLADE_dec, GLADE_offset, GLADE_mag, GLADE_filt, GLADE_dist, GLADE_dist_err, GLADE_distflag, GLADE_source, GLADE_name, GLADE_z, GLADE_zerr = query_GLADE(session, RA, Dec, _radius)
     if GLADE_matches>0:
         glade+=1
-
+        
     # Find matches in GWGC:
     GWGC_matches, GWGC_ra, GWGC_dec, GWGC_offset, GWGC_mag, GWGC_filt, GWGC_dist, GWGC_dist_err, GWGC_source, GWGC_name = query_GWGC(session, RA, Dec, _radius)
+
+    if GWGC_matches>0:
+        gwgc+=1    
+    
     # convert luminosity distance to redshift
     GWGC_z = np.array(GWGC_dist) / c_over_H0
     GWGC_zerr = np.array(GWGC_dist_err) / c_over_H0
-    if GWGC_matches>0:
-        gwgc+=1
-
+        
     HECATE_matches, HECATE_ra, HECATE_dec, HECATE_offset, HECATE_mag, HECATE_filt, HECATE_dist, HECATE_dist_err, HECATE_source, HECATE_name, HECATE_v, HECATE_verr = query_hecate(session, RA, Dec, _radius)
+
+    if HECATE_matches>0:
+        hecate+=1
+        
     # convert recession velocity to redshift
     HECATE_z = np.array(HECATE_v) / const.c.to_value(u.km / u.s)
     HECATE_zerr = np.array(HECATE_verr) / const.c.to_value(u.km / u.s)
-    if HECATE_matches>0:
-        hecate+=1
-
+        
     DESI_matches, DESI_ra, DESI_dec, DESI_offset, DESI_mag, DESI_filt, DESI_z, DESI_zerr, DESI_source, DESI_name = query_desi_spec(session, RA, Dec, _radius)
-    # convert redshift to distance
-    DESI_dist = np.array(DESI_z) * c_over_H0
-    DESI_dist_err = np.array(DESI_zerr) * c_over_H0
+
     if DESI_matches>0:
         desi+=1
 
+    # convert redshift to distance
+    DESI_dist = np.array(DESI_z) * c_over_H0
+    DESI_dist_err = np.array(DESI_zerr) * c_over_H0
+        
     SDSS_matches, SDSS_ra, SDSS_dec, SDSS_offset, SDSS_mag, SDSS_filt, SDSS_z, SDSS_zerr, SDSS_source, SDSS_name = query_sdss12phot(session, RA, Dec, _radius)
+
+    if SDSS_matches>0:
+        sdss+=1
+
     # convert redshift to distance
     SDSS_dist = np.array(SDSS_z) * c_over_H0
     SDSS_dist_err = np.array(SDSS_zerr) * c_over_H0
-    if SDSS_matches>0:
-        sdss+=1
         
     PS1_matches, PS1_ra, PS1_dec, PS1_offset, PS1_mag, PS1_filt, PS1_z, PS1_zerr, PS1_source, PS1_name = query_ps1(session, RA, Dec, _radius)
-    # convert redshift to distance
-    PS1_dist = np.array(PS1_z) * c_over_H0
-    PS1_dist_err = np.array(PS1_zerr) * c_over_H0
+
     if PS1_matches>0:
         ps1+=1
 
+    # convert redshift to distance
+    PS1_dist = np.array(PS1_z) * c_over_H0
+    PS1_dist_err = np.array(PS1_zerr) * c_over_H0
+    
     LSDR10_matches, LSDR10_ra, LSDR10_dec, LSDR10_offset, LSDR10_mag,LSDR10_filt, LSDR10_z, LSDR10_zerr, LSDR10_source, LSDR10_name = query_LS_DR10_photoz(session, RA, Dec, _radius)
-    LSDR10_dist = np.array(LSDR10_z) * c_over_H0
-    LSDR10_dist_err = np.array(LSDR10_zerr) * c_over_H0
+
     if LSDR10_matches>0:
         lsdr10+=1
+
+    LSDR10_dist = np.array(LSDR10_z) * c_over_H0
+    LSDR10_dist_err = np.array(LSDR10_zerr, dtype='object') * c_over_H0
+    LSDR10_zerr = np.array(LSDR10_zerr, dtype='object')
 
     # sum the findings, turn into numpy arrays
     tot_names = np.array(GLADE_name + GWGC_name + HECATE_name + DESI_name + SDSS_name + PS1_name + LSDR10_name, dtype=str)
@@ -145,13 +158,35 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     tot_dec = np.array(GLADE_dec + GWGC_dec + HECATE_dec + DESI_dec + SDSS_dec + PS1_dec + LSDR10_dec)
     tot_filt = np.array(GLADE_filt + GWGC_filt + HECATE_filt + DESI_filt + SDSS_filt + PS1_filt + LSDR10_filt)
     tot_dists = np.concatenate([GLADE_dist, GWGC_dist, HECATE_dist, DESI_dist, SDSS_dist, PS1_dist, LSDR10_dist])
-    tot_dist_errs = np.concatenate([GLADE_dist_err, GWGC_dist_err, HECATE_dist_err, DESI_dist_err, SDSS_dist_err, PS1_dist_err, LSDR10_dist_err])
     tot_z = np.concatenate([GLADE_z, GWGC_z, HECATE_z, DESI_z, SDSS_z, PS1_z, LSDR10_z])
-    tot_zerr = np.concatenate([GLADE_zerr, GWGC_zerr, HECATE_zerr, DESI_zerr, SDSS_zerr, PS1_zerr, LSDR10_zerr])
     tot_source = np.array(GLADE_source + GWGC_source + HECATE_source + DESI_source + SDSS_source + PS1_source + LSDR10_source)
 
-    PCCS = pcc(tot_offsets,tot_mags)
+    # also sum the error findings, they require some special treatment though
+    tot_dist_errs = np.array(
+        list(GLADE_dist_err) +
+        list(GWGC_dist_err) +
+        list(HECATE_dist_err) +
+        list(DESI_dist_err) +
+        list(SDSS_dist_err) +
+        list(PS1_dist_err) +
+        list(LSDR10_dist_err),
+        dtype='object'
+    )
 
+    tot_zerr = np.array(
+        list(GLADE_zerr) +
+        list(GWGC_zerr) +
+        list(HECATE_zerr) +
+        list(DESI_zerr) +
+        list(SDSS_zerr) +
+        list(PS1_zerr) +
+        list(LSDR10_zerr),
+        dtype='object'
+    )
+
+    
+    PCCS = pcc(tot_offsets,tot_mags)
+    
     # put some basic cut on Pcc ?
     pcc_args = np.argsort(PCCS)[:10]
     cond = (PCCS[pcc_args] < _pcc_thresh)
@@ -170,7 +205,25 @@ def galaxy_search(RA: float, Dec: float, _radius: float = RADIUS_ARCMIN, _pcc_th
     if lsdr10==1:
         print(f"Found Legacy Survey DR10 Photo-z Catalog galaxy match.")
 
-    all_data = [{'ID':tot_names[pcc_args][cond][i],'PCC':PCCS[pcc_args][cond][i],'Offset':tot_offsets[pcc_args][cond][i],'RA':tot_ra[pcc_args][cond][i],'Dec':tot_dec[pcc_args][cond][i],'Dist':tot_dists[pcc_args][cond][i],'DistErr':tot_dist_errs[pcc_args][cond][i],'z':tot_z[pcc_args][cond][i],'zErr':tot_zerr[pcc_args][cond][i],'Mags':tot_mags[pcc_args][cond][i],'Filter':tot_filt[pcc_args][cond][i],'Source':tot_source[pcc_args][cond][i]} for i in range(len(PCCS[pcc_args][cond]))]
+    all_data = [
+        {
+            'ID':tot_names[pcc_args][cond][i],
+            'PCC':PCCS[pcc_args][cond][i],
+            'Offset':tot_offsets[pcc_args][cond][i],
+            'RA':tot_ra[pcc_args][cond][i],
+            'Dec':tot_dec[pcc_args][cond][i],
+            'Dist':tot_dists[pcc_args][cond][i],
+            # need to convert all to a np array first so we can convert to a list
+            # this is cause np arrays are not json serializable
+            'DistErr':np.array(tot_dist_errs[pcc_args][cond][i]).tolist(), 
+            'z':tot_z[pcc_args][cond][i],
+            # same thing is true here for zErr
+            'zErr':np.array(tot_zerr[pcc_args][cond][i]).tolist(),
+            'Mags':tot_mags[pcc_args][cond][i],
+            'Filter':tot_filt[pcc_args][cond][i],
+            'Source':tot_source[pcc_args][cond][i]
+        } for i in range(len(PCCS[pcc_args][cond]))
+    ]
 
     return len(PCCS[pcc_args][cond]), all_data
 
@@ -252,7 +305,10 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
                     z_err.append(0.)  # no error for spectroscopic redshift
                 elif _x['z_phot_mean'] != -99:
                     z.append(_x['z_phot_mean'])
-                    z_err.append((_x['z_phot_u68'] - _x['z_phot_l68']) / 2)
+
+                    # tuple of lower and upper errorbars cause LS_DR10 has both instead
+                    # of a single error. We will catch this later.
+                    z_err.append(np.array([_x['z_phot_l68'],_x['z_phot_u68']])) 
                 else:
                     continue
                 mag.append(nanomgy_to_mag(_x['flux_r']))
