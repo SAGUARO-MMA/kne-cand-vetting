@@ -18,6 +18,7 @@ from collections import OrderedDict
 import json
 import csv
 import re
+from time import sleep
 
 from fundamentals.stats import rolling_window_sigma_clip
 from operator import itemgetter
@@ -330,7 +331,7 @@ def stack_photometry(magnitudes, binningDays=1.):
 
     return allData
 
-def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None):
+def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None, timelimit: int = 5):
     '''
     Returns photometry from TNS.
     '''
@@ -341,7 +342,10 @@ def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KE
         print('Using tokens from environment')
 
     get_obj=[("objname",objname), ("objid",""), ("photometry","1"), ("spectra","0")]
-    response=TNS_get(get_obj, BOT_ID, BOT_NAME, API_KEY)
+    response,time_to_wait=TNS_get(get_obj, BOT_ID, BOT_NAME, API_KEY, timelimit)
+
+    if response is None:
+        return None, time_to_wait
 
     json_file = is_string_json(response.text)
     json_data=format_to_json(response.text)
@@ -359,13 +363,15 @@ def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KE
             'tel': e['telescope']['name']
         })
 
-    return allPhot
+    return allPhot, time_to_wait
 
 def set_bot_tns_marker(BOT_ID: str = None, BOT_NAME: str = None):
     tns_marker = 'tns_marker{"tns_id": "' + str(BOT_ID) + '", "type": "bot", "name": "' + BOT_NAME + '"}'
     return tns_marker
 
-def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None):
+def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None, timelimit: int = 5):
+
+    # setup the query TNS for the photometry
     TNS="www.wis-tns.org"
     url_tns_api="https://"+TNS+"/api/get"
     get_url = url_tns_api + "/object"
@@ -373,8 +379,32 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
     headers = {'User-Agent': tns_marker}
     json_file = OrderedDict(get_obj)
     get_data = {'api_key': API_KEY, 'data': json.dumps(json_file)}
-    response = requests.post(get_url, headers = headers, data = get_data)
-    return response
+
+    # actually do the query and simulatanesouly
+    # check the response to make sure it isn't throttling our API usage
+    while True:
+        response = requests.post(get_url, headers = headers, data = get_data)
+        remaining_str = response.headers.get('x-rate-limit-remaining')
+        time_to_reset = int(response.headers.get('x-rate-limit-reset')) # in seconds
+        
+        if remaining_str == 'Exceeded':
+            # we already exceeded the rate limit
+            return None, time_to_reset
+
+        remaining = int(remaining_str)
+        
+        if remaining == 0 and time_to_reset < timelimit:
+            # we have no remaining API queries :(
+            # but we don't have very long to wait!
+            sleep(time_to_reset)
+            
+        elif remaining == 0 and time_to_reset > timelimit:
+            # we are out of API queries :(
+            # and it is gonna take to long to wait :((
+            return None, time_to_reset
+            
+        else:
+            return response, time_to_reset
 
 def format_to_json(source):                                          #
     # change data to json format and return                          #
