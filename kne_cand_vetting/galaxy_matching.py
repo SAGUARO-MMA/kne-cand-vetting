@@ -16,8 +16,8 @@ from sassy_q3c_models.ps1_q3c_orm import Ps1Q3cRecord
 from sassy_q3c_models.ps1_q3c_orm_filters import ps1_q3c_orm_filters
 from sassy_q3c_models.desi_spec_q3c_orm import DesiSpecQ3cRecord
 from sassy_q3c_models.desi_spec_q3c_orm_filters import desi_spec_q3c_orm_filters
-from sassy_q3c_models.ls_dr10_photo_z_q3c_orm import LsDr10PhotoZQ3cRecord
-from sassy_q3c_models.ls_dr10_photo_z_q3c_orm_filters import ls_dr10_photo_z_q3c_orm_filters
+from sassy_q3c_models.ls_dr10_q3c_orm import LsDr10Q3cRecord
+from sassy_q3c_models.ls_dr10_q3c_orm_filters import ls_dr10_q3c_orm_filters
 
 from typing import Optional
 from astropy.coordinates import SkyCoord
@@ -289,8 +289,8 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
     gal_dec = []; source = []; name = []
 
     try:
-        query = session.query(LsDr10PhotoZQ3cRecord)
-        query = ls_dr10_photo_z_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
+        query = session.query(LsDr10Q3cRecord)
+        query = ls_dr10_q3c_orm_filters(query, {'cone': f'{ra},{dec},{_radius}'})
     except Exception as _e3:
         if _verbose:
             print(f"{_e3}")
@@ -298,7 +298,7 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
 
     if len(query.all()) > 0:
         m+=1
-        for _x in LsDr10PhotoZQ3cRecord.serialize_list(query.all()):
+        for _x in LsDr10Q3cRecord.serialize_list(query.all()):
             if np.isfinite(_x['flux_r']) and _x['flux_r'] != -99:
                 if _x['z_spec'] != -99:
                     z.append(_x['z_spec'])
