@@ -299,7 +299,7 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
     if len(query.all()) > 0:
         m+=1
         for _x in LsDr10Q3cRecord.serialize_list(query.all()):
-            if np.isfinite(_x['flux_r']) and _x['flux_r'] != -99:
+            if np.isfinite(_x['flux_r']) and _x['flux_r'] != -99 and _x['mtype']!='PSF':
                 if _x['z_spec'] != -99:
                     z.append(_x['z_spec'])
                     z_err.append(0.)  # no error for spectroscopic redshift
