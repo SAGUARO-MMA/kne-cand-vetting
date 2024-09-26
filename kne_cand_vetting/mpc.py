@@ -96,10 +96,6 @@ def movingobjectfilter(s_catalog, s_ra, s_dec, obsmjd, filter_radius):
     s_coords = SkyCoord(s_ra, s_dec, unit='deg')
     print(s_ra, s_dec, s_coords) 
     _, separation, _ = s_coords.match_to_catalog_sky(catalog_coords)
-    print(separation)
-    import matplotlib.pyplot as plt
-    plt.plot(catalog_coords.ra, catalog_coords.dec, 'o')
-    plt.show()
     return separation.arcsec < filter_radius
 
 def is_minor_planet(ra, dec, discovery_mjd, filter_radius=25):
