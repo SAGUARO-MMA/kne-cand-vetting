@@ -93,10 +93,11 @@ def movingobjectfilter(s_catalog, s_ra, s_dec, obsmjd, filter_radius):
         decs.append(body.a_dec)
     catalog_coords = SkyCoord(ras, decs, unit='rad')
     s_coords = SkyCoord(s_ra, s_dec, unit='deg')
-    _, separation, _ = s_coords.match_to_catalog_sky(catalog_coords)
-    return separation.arcsec < filter_radius
+    i, separation, _ = s_coords.match_to_catalog_sky(catalog_coords)
+    if separation.arcsec < filter_radius:
+        return s_catalog[i].name[:-2], separation.arcsec  # the last two characters of the name are the uncertainty code
 
-def is_minor_planet(ra, dec, discovery_mjd, filter_radius=25):
+def minor_planet_match(ra, dec, discovery_mjd, filter_radius=25.):
     """Checks if the target is a minor planet
 
     Args:
@@ -106,7 +107,7 @@ def is_minor_planet(ra, dec, discovery_mjd, filter_radius=25):
         filter_radius (float) : Flag as a minor planet if less than this filter radius in arcseconds
 
     Returns:
-        True if the candidate is within filter_radius at discovery_mjd, False otherwise
+        (name, separation) of the minor planet if the candidate is within filter_radius at discovery_mjd, None otherwise
     """
 
     # download/load the moving object catalog from the Minor Planet Center
