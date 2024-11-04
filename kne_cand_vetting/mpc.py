@@ -95,7 +95,7 @@ def movingobjectfilter(s_catalog, s_ra, s_dec, obsmjd, filter_radius):
     s_coords = SkyCoord(s_ra, s_dec, unit='deg')
     i, separation, _ = s_coords.match_to_catalog_sky(catalog_coords)
     if separation.arcsec < filter_radius:
-        return s_catalog[i].name[:-2], separation.arcsec  # the last two characters of the name are the uncertainty code
+        return s_catalog[i].name[:-2], separation.arcsec[0]  # the last two characters of the name are the uncertainty code
 
 def minor_planet_match(ra, dec, discovery_mjd, filter_radius=25.):
     """Checks if the target is a minor planet
