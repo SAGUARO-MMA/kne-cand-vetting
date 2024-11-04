@@ -186,8 +186,7 @@ def tns_query(session, coords, radius):
         query = tns_q3c_orm_filters(query, {'cone': f'{ra},{dec},{radius}'})
         for tns_match in query:
             tns_matches.append((tns_match.name_prefix + tns_match.name, tns_match.redshift,
-                                tns_match.objtype, tns_match.internal_names,
-                                tns_match.discoverydate))
+                                tns_match.objtype, tns_match.internal_names))
     return tns_matches
 
 
