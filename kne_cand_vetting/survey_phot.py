@@ -388,7 +388,7 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
             return response, -99 # I'm just setting the time_to_reset to -99 so other code doesn't break
         
         remaining_str = response.headers.get('x-rate-limit-remaining')
-        time_to_reset = int(response.headers.get('x-rate-limit-reset')) # in seconds
+        time_to_reset = int(response.headers.get('x-rate-limit-reset', -99)) # in seconds
         
         if remaining_str == 'Exceeded':
             # we already exceeded the rate limit
