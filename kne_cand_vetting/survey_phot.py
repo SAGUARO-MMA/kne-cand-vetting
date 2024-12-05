@@ -344,8 +344,8 @@ def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KE
     get_obj=[("objname",objname), ("objid",""), ("photometry","1"), ("spectra","0")]
     response,time_to_wait=TNS_get(get_obj, BOT_ID, BOT_NAME, API_KEY, timelimit)
 
-    if response is None:
-        return None, time_to_wait
+    if response is None or response.status_code != 200:
+        return response, time_to_wait
 
     json_file = is_string_json(response.text)
     json_data=format_to_json(response.text)
@@ -384,6 +384,9 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
     # check the response to make sure it isn't throttling our API usage
     while True:
         response = requests.post(get_url, headers = headers, data = get_data)
+        if response.status_code != 200:
+            return response, -99 # I'm just setting the time_to_reset to -99 so other code doesn't break
+        
         remaining_str = response.headers.get('x-rate-limit-remaining')
         time_to_reset = int(response.headers.get('x-rate-limit-reset')) # in seconds
         
