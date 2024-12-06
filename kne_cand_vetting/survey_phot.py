@@ -386,19 +386,19 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
         response = requests.post(get_url, headers = headers, data = get_data)
         if response.status_code != 200:
             return response, -99 # I'm just setting the time_to_reset to -99 so other code doesn't break
-        
-        remaining_str = response.headers.get('x-rate-limit-remaining', -99)
-        time_to_reset = int(response.headers.get('x-rate-limit-reset', -99)) # in seconds
 
-        if remaining_str < 0 or time_to_reset < 0:
-            return response, time_to_reset
-        
+        remaining_str = response.headers.get('x-rate-limit-remaining', -99)
+        time_to_reset = int(response.headers.get('x-rate-limit-reset', -99))  # in seconds
+
         if remaining_str == 'Exceeded':
             # we already exceeded the rate limit
             return None, time_to_reset
 
         remaining = int(remaining_str)
-        
+
+        if remaining < 0 or time_to_reset < 0:
+            return response, time_to_reset
+
         if remaining == 0 and time_to_reset < timelimit:
             # we have no remaining API queries :(
             # but we don't have very long to wait!
