@@ -31,6 +31,9 @@ import argparse
 import os
 import time
 
+from urllib.request import urlopen
+import json
+
 # +
 # __doc__
 # -
@@ -579,6 +582,55 @@ def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
 
+def query_blast(tns_name):
+    """
+    Query the BLAST host galaxy service
+
+    Args:
+        tns_name (str) : The TNS target name to grab the data from BLAST for
+
+    Returns:
+        best match BLAST ID, host ra, host dec, host redshift. Redshift will be
+        spectroscopic if available, otherwise photometric.
+    """
+
+    # clean up the input name a little
+    if tns_name[:2] == "AT":
+        tns_name = tns_name.replace("AT", "")
+        
+    failed_query_res = (None, None, None, None)
+
+    # do the query
+    blast_base_url = "https://blast.scimma.org"
+    blast_query_url = f"{blast_base_url}/api/transient/?name={tns_name}&format=json"
+    with urlopen(blast_query_url) as response:
+        if response.status != 200:
+            return failed_query_res
+        else:
+            blast_data = json.loads(response.read())
+
+    if len(blast_data) == 0:
+        return failed_query_res
+
+    blast_data = blast_data[0]
+    if "host" not in blast_data:
+        return failed_query_res
+    host_data = blast_data["host"]
+
+   if host_data["redshift"] is not None:
+       # prefer spec-z over phot-z
+       z = host_data["redshift"] 
+   else:
+       # well I guess we need to use phot-z
+       z = host_data["photometric_redshift"],
+   
+    return (
+        host_data["id"],
+        host_data["ra_deg"],
+        host_data["dec_deg"],
+        z
+    )
+    
 if __name__ == '__main__':
 
     # get command line argument(s)
