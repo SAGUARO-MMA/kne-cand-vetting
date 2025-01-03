@@ -331,39 +331,6 @@ def stack_photometry(magnitudes, binningDays=1.):
 
     return allData
 
-def query_TNSphot(objname: str, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = None, timelimit: int = 5):
-    '''
-    Returns photometry from TNS.
-    '''
-
-    if BOT_ID is None or BOT_NAME is None or API_KEY is None:
-        raise Exception('One or more tokens not provided')
-    else:
-        print('Using tokens from environment')
-
-    get_obj=[("objname",objname), ("objid",""), ("photometry","1"), ("spectra","0")]
-    response,time_to_wait=TNS_get(get_obj, BOT_ID, BOT_NAME, API_KEY, timelimit)
-
-    if response is None or response.status_code != 200:
-        return response, time_to_wait
-
-    json_file = is_string_json(response.text)
-    json_data=format_to_json(response.text)
-    result = json.loads(json_data)
-
-    epochs = result['data']['reply']['photometry']
-    allPhot = []
-    for e in epochs:
-        allPhot.append({
-            'jd': e['jd'],
-            'mag': e['flux'],
-            'magerr': e['fluxerr'],
-            'F': e['filters']['name'],
-            'limflux': e['limflux'],
-            'tel': e['telescope']['name']
-        })
-
-    return allPhot, time_to_wait
 
 def set_bot_tns_marker(BOT_ID: str = None, BOT_NAME: str = None):
     tns_marker = 'tns_marker{"tns_id": "' + str(BOT_ID) + '", "type": "bot", "name": "' + BOT_NAME + '"}'
