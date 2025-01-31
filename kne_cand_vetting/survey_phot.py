@@ -385,13 +385,15 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
     while True:
         response = requests.post(get_url, headers = headers, data = get_data)
         remaining_str = response.headers.get('x-rate-limit-remaining')
-        time_to_reset = int(response.headers.get('x-rate-limit-reset')) # in seconds
+
+        time_str = response.headers.get('x-rate-limit-reset')
+        time_to_reset = time_str if time_str is None else int(time_str) # in seconds
         
         if remaining_str == 'Exceeded':
             # we already exceeded the rate limit
             return None, time_to_reset
 
-        remaining = int(remaining_str)
+        remaining = remaining_str if remaining_str is None else int(remaining_str)
         
         if remaining == 0 and time_to_reset < timelimit:
             # we have no remaining API queries :(

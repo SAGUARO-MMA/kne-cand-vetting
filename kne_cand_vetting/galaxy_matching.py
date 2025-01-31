@@ -590,15 +590,14 @@ def query_blast(tns_name):
         tns_name (str) : The TNS target name to grab the data from BLAST for
 
     Returns:
-        best match BLAST ID, host ra, host dec, host redshift. Redshift will be
-        spectroscopic if available, otherwise photometric.
+        Best match host data from BLAST
     """
 
     # clean up the input name a little
     if tns_name[:2] == "AT":
         tns_name = tns_name.replace("AT", "")
         
-    failed_query_res = (None, None, None, None)
+    failed_query_res = None
 
     # do the query
     blast_base_url = "https://blast.scimma.org"
@@ -617,19 +616,7 @@ def query_blast(tns_name):
         return failed_query_res
     host_data = blast_data["host"]
 
-   if host_data["redshift"] is not None:
-       # prefer spec-z over phot-z
-       z = host_data["redshift"] 
-   else:
-       # well I guess we need to use phot-z
-       z = host_data["photometric_redshift"],
-   
-    return (
-        host_data["id"],
-        host_data["ra_deg"],
-        host_data["dec_deg"],
-        z
-    )
+    return host_data
     
 if __name__ == '__main__':
 
