@@ -581,42 +581,6 @@ def query_ps1(session, ra, dec, _radius, _verbose: bool = True):
                 name.append(_x['psps_objid'])
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
-
-def query_blast(tns_name):
-    """
-    Query the BLAST host galaxy service
-
-    Args:
-        tns_name (str) : The TNS target name to grab the data from BLAST for
-
-    Returns:
-        Best match host data from BLAST
-    """
-
-    # clean up the input name a little
-    if tns_name[:2] == "AT":
-        tns_name = tns_name.replace("AT", "")
-        
-    failed_query_res = None
-
-    # do the query
-    blast_base_url = "https://blast.scimma.org"
-    blast_query_url = f"{blast_base_url}/api/transient/?name={tns_name}&format=json"
-    with urlopen(blast_query_url) as response:
-        if response.status != 200:
-            return failed_query_res
-        else:
-            blast_data = json.loads(response.read())
-
-    if len(blast_data) == 0:
-        return failed_query_res
-
-    blast_data = blast_data[0]
-    if "host" not in blast_data:
-        return failed_query_res
-    host_data = blast_data["host"]
-
-    return host_data
     
 if __name__ == '__main__':
 
