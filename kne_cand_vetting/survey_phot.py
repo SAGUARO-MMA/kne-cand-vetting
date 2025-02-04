@@ -347,14 +347,26 @@ def TNS_get(get_obj, BOT_ID: str = None, BOT_NAME: str = None, API_KEY: str = No
     json_file = OrderedDict(get_obj)
     get_data = {'api_key': API_KEY, 'data': json.dumps(json_file)}
 
+    requests_kwargs = dict(
+        headers = headers,
+        data = get_data
+    )
+
+    logger.info(f"Posting the following request to {get_url}:\n{requests_kwargs}")
+    
     # actually do the query and simulatanesouly
     # check the response to make sure it isn't throttling our API usage
     while True:
-        response = requests.post(get_url, headers = headers, data = get_data)
-        
+
+        response = requests.post(get_url, **requests_kwargs)
+        try:
+            logger.info(f"The TNS server responded with\n{response.json()}")
+        except:
+            logger.info(f"The TNS server responded with a response that can not be parsed as a JSON:\n{response}")
+
         if response.status_code != 200:
             return response, -99 # I'm just setting the time_to_reset to -99 so other code doesn't break
-
+        
         remaining_str = response.headers.get('x-rate-limit-remaining', -99)
         time_to_reset = int(response.headers.get('x-rate-limit-reset', -99))  # in seconds
         
