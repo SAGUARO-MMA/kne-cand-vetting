@@ -300,6 +300,11 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
         m+=1
         for _x in LsDr10Q3cRecord.serialize_list(query.all()):
             if np.isfinite(_x['flux_r']) and _x['flux_r'] != -99:
+
+                # The following line will filter out anything that is r < 18
+                # *and* is PSF photometry. A possible limitation (although unlikely)
+                # is that we will miss stuff that is r < 18 and compact and
+                # so it accidentally gets labelled as PSF, even though it isn't
                 if nanomgy_to_mag(_x['flux_r'])>18 or _x['mtype']!='PSF':
                     if _x['z_spec'] != -99:
                         z.append(_x['z_spec'])
