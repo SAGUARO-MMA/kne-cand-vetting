@@ -300,32 +300,33 @@ def query_LS_DR10_photoz(session, ra, dec, _radius, _verbose: bool = True):
         m+=1
         for _x in LsDr10Q3cRecord.serialize_list(query.all()):
             if np.isfinite(_x['flux_r']) and _x['flux_r'] != -99:
-
+                
                 # The following line will filter out anything that is r < 18
                 # *and* is PSF photometry. A possible limitation (although unlikely)
                 # is that we will miss stuff that is r < 18 and compact and
                 # so it accidentally gets labelled as PSF, even though it isn't
-                if nanomgy_to_mag(_x['flux_r'])>18 or _x['mtype']!='PSF':
-                    if _x['z_spec'] != -99:
-                        z.append(_x['z_spec'])
-                        z_err.append(0.)  # no error for spectroscopic redshift
-                    elif _x['z_phot_mean'] != -99:
-                        z.append(_x['z_phot_mean'])
+                if nanomgy_to_mag(_x['flux_r'])<18 and _x['mtype']=='PSF': continue
 
-                        # tuple of lower and upper errorbars cause LS_DR10 has both instead
-                        # of a single error. We will catch this later.
-                        z_err.append(np.array([_x['z_phot_l68'],_x['z_phot_u68']])) 
-                    else:
-                        continue
-                    mag.append(nanomgy_to_mag(_x['flux_r']))
-                    filt.append('r')
-                    gal = SkyCoord(_x['ra']*u.deg, _x['declination']*u.deg)
-                    cand = SkyCoord(ra*u.deg, dec*u.deg)
-                    gal_offset.append(cand.separation(gal).arcsec)
-                    gal_ra.append(_x['ra'])
-                    gal_dec.append(_x['declination'])
-                    source.append('LS_DR10')
-                    name.append(_x['lid'])
+                if _x['z_spec'] != -99:
+                    z.append(_x['z_spec'])
+                    z_err.append(0.)  # no error for spectroscopic redshift
+                elif _x['z_phot_mean'] != -99:
+                    z.append(_x['z_phot_mean'])
+
+                    # tuple of lower and upper errorbars cause LS_DR10 has both instead
+                    # of a single error. We will catch this later.
+                    z_err.append(np.array([_x['z_phot_l68'],_x['z_phot_u68']])) 
+                else:
+                    continue
+                mag.append(nanomgy_to_mag(_x['flux_r']))
+                filt.append('r')
+                gal = SkyCoord(_x['ra']*u.deg, _x['declination']*u.deg)
+                cand = SkyCoord(ra*u.deg, dec*u.deg)
+                gal_offset.append(cand.separation(gal).arcsec)
+                gal_ra.append(_x['ra'])
+                gal_dec.append(_x['declination'])
+                source.append('LS_DR10')
+                name.append(_x['lid'])
 
     return m, gal_ra, gal_dec, gal_offset, mag, filt, z, z_err, source, name
 
